@@ -366,3 +366,21 @@ h1,h2,h3,.hello,.selname,.wmid h2,.ycount b,.top2 b,.chead b,.cert .big,summary{
 :root{--glass-shadow:0 12px 36px rgba(0,0,0,.55)}
 .wmid .eyebrow{letter-spacing:0!important;text-transform:none!important;font-size:12px}
 .box,.boxes .bl b,.cert .facts .num{font-family:var(--body)!important}
+
+/* Toni di prova (pulsante in alto a destra, tono.js): nero = Champagne qui sopra, grafite = scuro più morbido, avorio = chiaro */
+.tonobtn{margin-left:auto;margin-right:10px;width:34px;height:34px;border-radius:50%;border:1px solid color-mix(in srgb,var(--hero-ink) 25%,transparent);background:transparent;color:var(--hero-ink);display:grid;place-items:center;padding:0}
+#tonoMsg{position:fixed;left:50%;top:calc(64px + env(safe-area-inset-top,0px));transform:translate(-50%,-8px);z-index:50;background:var(--raise);color:var(--ink);border:1px solid var(--line2);border-radius:999px;padding:8px 16px;font:500 13px/1.2 var(--body);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+#tonoMsg.on{opacity:1;transform:translate(-50%,0)}
+html[data-tono="grafite"]{--bg:#1C1B19;--surface:#262522;--raise:#312F2B;--tile:#312F2B;--sheet:#262522;--ink:#F3EEE5;--muted:#A39C90;--line:#36342F;--line2:#4A4740;
+--hero:#1C1B19;--hero-ink:#F3EEE5;--star-off:#4A4740;--glass:rgba(38,37,34,.84)}
+html[data-tono="grafite"] .apphead{background:#1C1B19;color:#F3EEE5}
+html[data-tono="grafite"] .pick,html[data-tono="grafite"] .pick.vuota{background:radial-gradient(120% 90% at 85% 0%,color-mix(in srgb,var(--dc) 45%,#1C1B19),#262522 70%)}
+html[data-tono="grafite"] .seg button{box-shadow:inset 0 0 0 1px #F3EEE540}
+html[data-tono="avorio"]{--bg:#F6F1E8;--surface:#FFFFFF;--raise:#FFFFFF;--tile:#EFE8DC;--sheet:#FFFFFF;--ink:#1E1A14;--muted:#7A7164;--line:#E6DED0;--line2:#D2C7B5;
+--hero:#F6F1E8;--hero-ink:#1E1A14;--star-off:#D2C7B5;--glass:rgba(255,255,255,.86);--glass-line:#E6DED0;--glass-shadow:0 10px 30px rgba(60,45,20,.14);
+--g1t:#9A4A37;--g2t:#3D6E5C;--g3t:#435A8C;--g4t:#6A5286;--g5t:#8A3F69;--g6t:#7A5E22;--tint:14%;--tint-ink:#000;--tint-mix:80%;color-scheme:light}
+html[data-tono="avorio"] .apphead{background:#F6F1E8;color:#1E1A14;border-bottom:1px solid #E6DED0}
+html[data-tono="avorio"] .pick,html[data-tono="avorio"] .pick.vuota{background:radial-gradient(120% 90% at 85% 0%,color-mix(in srgb,var(--dc) 18%,#FFFFFF),#FFFFFF 70%)}
+html[data-tono="avorio"] .seg button{box-shadow:inset 0 0 0 1px #1E1A1433}
+html[data-tono="avorio"] body{font-weight:400}
+html[data-tono="avorio"] .hello span,html[data-tono="avorio"] .ycount b{background-image:linear-gradient(100deg,color-mix(in srgb,var(--accent) 85%,#000),color-mix(in srgb,var(--accent) 80%,#fff) 45%,color-mix(in srgb,var(--accent) 92%,#000))}

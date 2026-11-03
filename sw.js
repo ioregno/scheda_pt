@@ -3,7 +3,7 @@
 importScripts('config.js');
 const VER = (self.CONFIG && self.CONFIG.versione) || '1';
 const CACHE = 'scheda-pt-' + VER;
-const FILES = ['./', 'index.html', 'coach.html', 'prova.html', 'tema.css', 'config.js', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png']
+const FILES = ['./', 'index.html', 'coach.html', 'prova.html', 'tema.css', 'tono.js', 'config.js', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png']
   .concat(((self.CONFIG && self.CONFIG.macchine) || []).map(m => m.foto).filter(Boolean));
 self.addEventListener('install', e => {
   // una foto mancante non deve bloccare tutto: ognuna si salva per conto suo
