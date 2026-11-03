@@ -79,7 +79,7 @@ esempio = {"id": "esempio", "cliente": "Marco", "obiettivo": 4, "varC": "Corpo l
            "giorni": giorni, "note": NOTE_FINALI}
 
 cfg = {
-    "versione": "2", "app": "Scheda", "coach": "Il tuo coach", "indirizzo": "", "palestra": "Green Theory", "colore": "#E6BE8A", "whatsapp": "",
+    "versione": "2", "app": "Scheda", "coach": "Il tuo coach", "indirizzo": "", "palestra": "Green Theory", "colore": "#E6BE8A", "whatsapp": "", "scadenza": "", "assistenza": "",
     "gruppi": GRUPPI, "macchine": macchine, "esempio": esempio,
 }
 txt = ("// CONFIGURAZIONE DELL'APP: l'unico file da cambiare (vedi GUIDA-PT.md).\n"
@@ -90,6 +90,8 @@ txt = ("// CONFIGURAZIONE DELL'APP: l'unico file da cambiare (vedi GUIDA-PT.md).
        "//   colore     colore principale, es. \"#E6BE8A\" (oro); vuoto = colore del tema\n"
        "//   whatsapp   tuo numero con prefisso, es. \"393331234567\": i clienti ti mandano il resoconto lì\n"
        "//   indirizzo  (facoltativo) indirizzo dell'app online, es. \"https://mario-pt.netlify.app/\"\n"
+       "//   scadenza   (facoltativa, solo per le prove) fine prova, es. \"2026-11-10\": dal giorno dopo la pagina Coach si blocca, i clienti no. Vuota = nessun limite\n"
+       "//   assistenza (con la scadenza) numero WhatsApp di chi vende l'app, per il tasto \"Attiva la versione completa\"\n"
        "//   gruppi     muscoli tra cui scegliere\n"
        "//   macchine   la tua libreria: id (senza spazi), nome, marca, distretto, gruppi, esecuzione (passi), consiglio, foto (\"foto/nome.jpg\")\n"
        "//   esempio    scheda di esempio: la vedono i clienti in \"Guarda un esempio\" e tu come modello\n"

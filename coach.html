@@ -123,9 +123,25 @@ function newClient(from){
 const freeDayId = c => { for (let i = 1; i <= 6; i++) if (!c.giorni.some(g => g.id === 'g' + i)) return i; return 0; };
 const exLabel = e => e.m && M[e.m] ? M[e.m].nome : (e.n || 'Esercizio');
 
+// ---------- prova a tempo (facoltativa) ----------
+// solo se in config.js c'è "scadenza" (AAAA-MM-GG): dal giorno dopo la pagina Coach si blocca, niente schede nuove né modifiche.
+// Senza scadenza non cambia niente. I clienti continuano a usare la scheda che hanno già, e il coach può sempre scaricare il backup.
+const SCAD = !PROVA && /^\d{4}-\d{2}-\d{2}$/.test(C.scadenza || '') ? C.scadenza : '';
+const scaduta = () => !!SCAD && iso(new Date()) > SCAD;
+function renderScaduta(){
+  $('foot').hidden = true; if ($('dlg').open) $('dlg').close();
+  const wa = String(C.assistenza || '').replace(/\D/g, '');
+  $('v').innerHTML = '<section class="card"><div class="eyebrow">Prova terminata</div><h2>La prova è finita il ' + fmt(SCAD) + '</h2>' +
+    '<p style="margin:0">Le schede che hai già mandato continuano a funzionare per i tuoi clienti. Per creare schede nuove e modificarle serve la versione completa.</p>' +
+    (wa ? '<a class="primary" style="display:grid;place-items:center;text-align:center;text-decoration:none;color:var(--btn-ink)" href="https://wa.me/' + wa + '?text=' + encodeURIComponent('Ciao, vorrei attivare la versione completa dell\'app delle schede' + (C.coach ? ' (' + C.coach + ')' : '') + '.') + '">Attiva la versione completa</a>'
+        : '<p class="hint">Contatta chi ti ha dato l\'app per attivare la versione completa.</p>') +
+    '<button type="button" class="ghost" data-act="bkdown">Scarica le tue schede (backup)</button></section>';
+}
+
 // ---------- viste ----------
 function render(){
   scrollY0 = window.scrollY;
+  if (scaduta()) return renderScaduta();
   if (view === 'list') return renderList();
   if (view === 'edit') return renderEdit();
 }
@@ -135,6 +151,7 @@ function renderList(){
   $('footIn').innerHTML = '<button type="button" class="primary" data-act="new">Nuovo cliente</button>';
   $('v').innerHTML =
     '<section><div class="eyebrow">' + esc([C.coach, C.palestra].filter(Boolean).join(' · ') || 'Pagina del coach') + '</div><h2>I tuoi clienti</h2></section>' +
+    (SCAD ? '<p class="hint" style="margin-top:-8px">Prova gratuita fino al <b>' + fmt(SCAD) + '</b></p>' : '') +
     (db.clienti.length ? db.clienti.map(c => '<button type="button" class="cl" data-open="' + c.id + '"><b>' + esc(c.cliente || 'Senza nome') + '</b><small>' + c.giorni.length + ' allenamenti · ' + (+c.obiettivo || c.giorni.length) + ' a settimana · aggiornata il ' + fmt(c.data) + (c.inviata ? ' · inviata' : ' · da inviare') + '</small></button>').join('')
       : '<div class="card"><p style="margin:0">Ancora nessun cliente. Premi <b>Nuovo cliente</b>: puoi partire da una scheda vuota o dalla scheda di esempio e cambiarla.</p></div>') +
     '<details class="card"><summary><b>Backup delle schede</b></summary><p class="hint">Le schede stanno solo in questo telefono o computer. Scarica un backup ogni tanto e conservalo: serve anche per passare a un altro dispositivo.</p>' +
@@ -227,6 +244,7 @@ $('dlg').addEventListener('click', e => {
 
 // ---------- foglio invio ----------
 async function openSend(){
+  if (scaduta()) return render();
   const c = get(cur);
   const n = c.giorni.filter(g => VV.some(v => (g[v] || []).length)).length;
   if (!n) { toast('Aggiungi almeno un esercizio'); return; }
@@ -284,6 +302,7 @@ document.addEventListener('click', e => {
   if (d.gdel) { if (t.dataset.armed) { c.giorni.splice(+d.gdel, 1); touch(c); render(); window.scrollTo(0, scrollY0); } else { t.dataset.armed = 1; t.textContent = 'Sicuro?'; } return; }
 });
 function openNew(){
+  if (scaduta()) return render();
   const others = db.clienti;
   $('sheet').innerHTML = '<div class="grab"></div><h3>Nuovo cliente</h3><p class="hint">Da dove parti?</p>' +
     '<button type="button" class="primary" data-nw="empty">Scheda vuota</button>' +
