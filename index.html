@@ -1,0 +1,706 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#111111" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png">
+<title>Scheda</title>
+<link rel="stylesheet" href="tema.css">
+</head><body>
+
+<div class="demobar" id="demoBar" hidden><span><b>Esempio</b>: un anno di allenamenti finti, non viene salvato nulla.</span><button type="button" class="ghost" id="demoExit">Esci</button></div>
+<header class="apphead"><h1 id="appName">Scheda</h1><span class="avatar" id="avatar" aria-hidden="true"></span></header>
+<section class="hero" aria-label="Saluto"><div class="hello" id="hello">Ciao<span id="helloName"></span></div><p id="heroSub"></p></section>
+<div class="wrap welcome" id="welcome" hidden>
+  <section class="panel wel">
+    <div class="eyebrow" id="welCoach"></div>
+    <h2>La tua scheda arriva dal coach</h2>
+    <p>Apri il link che ti ha mandato il tuo coach su WhatsApp: la scheda si salva in questo telefono e da quel momento l'app funziona anche senza internet.</p>
+    <p class="extra">Su iPhone: apri il link con Safari, poi Condividi e "Aggiungi alla schermata Home".</p>
+    <button type="button" class="primary" id="demoGo3">Guarda un esempio</button>
+  </section>
+</div>
+<div class="newsch" id="newSch" hidden></div>
+<div class="wrap" id="app">
+  <section class="wsec panel" aria-label="Settimana">
+    <div class="phead"><div class="ycount" id="ycount"></div><div class="boxes" id="boxes"></div></div>
+    <div class="wnav">
+      <button type="button" class="wbtn" id="wPrev" aria-label="Settimana precedente">‹</button>
+      <div class="wmid"><h2 id="wk">Settimana</h2><div class="eyebrow"><span id="wkrange"></span> · <span id="yleft"></span></div></div>
+      <button type="button" class="wbtn" id="wNext" aria-label="Settimana successiva">›</button>
+    </div>
+    <div class="week" id="week"></div>
+  </section>
+
+  <section class="pick" id="pick" aria-label="Allenamento di oggi">
+    <div class="sugg" id="sugg">Cosa vuoi allenare oggi?</div>
+    <div class="selwrap"><span class="selname" id="selName" aria-hidden="true"></span><select id="selDay" aria-label="Allenamento"></select></div>
+    <div class="seg" id="seg" role="group" aria-label="Variante">
+      <button type="button" id="vA" data-v="A"><span class="num">Var. A</span><small id="vAlast"></small></button>
+      <button type="button" id="vB" data-v="B"><span class="num">Var. B</span><small id="vBlast"></small></button>
+      <button type="button" id="vC" data-v="C"><span class="num" id="vClab">Corpo libero</span><small id="vClast"></small></button>
+    </div>
+    <p class="pwhy" id="why"></p>
+    <p class="daynote" id="daynote"></p>
+  </section>
+
+  <ol class="exs" id="exs"></ol>
+  <p class="extra" id="exhelp">Spunta gli esercizi che fai: dal 40% si sblocca Termina, dove segni cardio, addominali extra e com'è andata. Tocca il nome di una macchina per vedere foto ed esecuzione, tocca il cerchio per spuntare l'esercizio.</p>
+
+  <section class="stats" aria-label="Statistiche">
+    <div><div class="eyebrow">Statistiche</div><h2>Cosa alleni di più</h2></div>
+    <div class="seg3" id="rng" role="group" aria-label="Periodo">
+      <button type="button" data-r="30">Ultimo mese</button>
+      <button type="button" data-r="182">6 mesi</button>
+      <button type="button" data-r="365">Anno</button>
+    </div>
+    <div id="statbody"></div>
+    <div class="report" id="repBox"><button type="button" class="ghost" id="repGo">Manda il resoconto al coach</button><small class="eyebrow">Gli ultimi 7 giorni con pesi e stelle, già scritti in un messaggio.</small></div>
+  </section>
+
+  <section aria-label="Storico">
+    <div class="eyebrow">Ultimi allenamenti</div><h2>Storico</h2>
+    <ul class="hist" id="hist"></ul>
+  </section>
+
+  <details>
+    <summary>Backup e note</summary>
+    <p class="sync" id="yinfo"></p>
+    <p class="sync" id="sync"></p>
+    <p class="sync" id="schInfo"></p>
+    <ul id="notes"></ul>
+    <p>Il backup copia tutto lo storico come testo. Incollalo qui sotto su un altro dispositivo e premi Importa per unirlo.</p>
+    <div class="row"><button class="ghost" type="button" id="bkCopy">Copia backup</button></div>
+    <textarea id="bkIn" aria-label="Incolla backup" placeholder="Incolla qui il backup"></textarea>
+    <div class="row"><button class="ghost" type="button" id="bkImp">Importa</button></div>
+    <p>Vuoi vedere come appare dopo qualche mese di utilizzo? <button type="button" class="linkbtn" id="demoGo2">Apri l'esempio</button></p>
+  </details>
+</div>
+
+<div class="bar"><div class="in"><button class="primary endbtn" type="button" id="logBtn">Termina</button><div class="rate" id="rate" hidden></div></div></div>
+
+<dialog id="dlgM"><div class="sheet" id="sheetM"></div></dialog>
+<dialog id="dlgD"><div class="sheet" id="sheetD"></div></dialog>
+<dialog id="dlgC" class="full"><div class="close-pg" id="pageC"></div></dialog>
+<div class="peek" id="peek" hidden></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="config.js"></script>
+<script>
+(function(){
+const C = window.CONFIG || {};
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const KEY = 'scheda-pt-v1', UIKEY = 'scheda-pt-ui-v1', SKEY = 'scheda-pt-scheda-v1';
+// macchine della palestra (libreria del coach, in config.js)
+const M = {}; (C.macchine || []).forEach(m => M[m.id] = Object.assign({}, m, {img: m.foto || ''}));
+const LEGS = ['Quadricipiti', 'Femorali', 'Glutei', 'Polpacci'];
+
+// colore del coach (config.js): sostituisce il verde fluo; scritte scure o chiare a seconda del colore
+(function brand(){
+  if (!/^#[0-9a-f]{6}$/i.test(C.colore || '')) return;   // senza colore resta quello del tema
+  const c = C.colore;
+  const n = parseInt(c.slice(1), 16), lum = (0.299 * (n >> 16) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) / 255;
+  document.documentElement.style.setProperty('--accent', c);
+  document.documentElement.style.setProperty('--on-accent', lum < 0.6 ? '#FFFFFF' : '#111111');
+})();
+
+// la scheda arriva dal coach dentro il link (#s=...), compressa; poi resta salvata nel telefono
+const b64d = s => { const b = atob(s.replace(/-/g, '+').replace(/_/g, '/')); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
+async function decodeScheda(code){
+  const raw = b64d(code.slice(1));
+  const bytes = code[0] === 'z' ? new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer()) : raw;
+  const s = JSON.parse(new TextDecoder().decode(bytes));
+  if (!s || !Array.isArray(s.giorni) || !s.giorni.length) throw new Error('scheda vuota');
+  return s;
+}
+let SCH = null;
+try { SCH = JSON.parse(localStorage.getItem(SKEY)); } catch (e) {}
+// dalla forma compatta del link a quella usata dall'app
+function expand(s){
+  const out = [];
+  (s.giorni || []).forEach((g, gi) => {
+    const d = {id: /^g[1-6]$/.test(g.id) ? g.id : 'g' + (gi + 1), nome: g.nome || 'Allenamento ' + (gi + 1), nota: g.nota || ''};
+    ['A','B','C'].forEach(v => d[v] = (g[v] || []).map(e => ({slug: e.m && M[e.m] ? e.m : null, nome: e.m && M[e.m] ? '' : (e.n || (e.m ? e.m : 'Esercizio')), serie: +e.s || 3, rip: String(e.r || '10'), gruppi: e.g && e.g.length ? e.g : (e.m && M[e.m] && M[e.m].gruppi) || [], perche: e.p || '', come: e.c && e.c.length ? e.c : null})));
+    const gr = []; ['A','B','C'].forEach(v => d[v].forEach(e => e.gruppi.forEach(x => { if (!gr.includes(x)) gr.push(x); })));
+    d.gruppi = g.gruppi && g.gruppi.length ? g.gruppi : gr;
+    // nome corto per le etichette della settimana: "Allenamento A" diventa "A", "Petto e braccia" diventa "Petto"
+    const w = d.nome.split(/\s+/);
+    d.breve = g.breve || (/^allenamento$/i.test(w[0]) && w[1] ? w.slice(1).join(' ') : w[0]).slice(0, 10);
+    d.vars = ['A','B','C'].filter(v => d[v].length);
+    if (!d.vars.length) return;
+    out.push(d);
+  });
+  return out;
+}
+let DAYS = [], BY = {}, D = {gruppi: C.gruppi || [], note: []};
+function useScheda(s){
+  SCH = s; DAYS = expand(s || {}); BY = {}; DAYS.forEach(d => BY[d.id] = d);
+  const gr = (C.gruppi || []).slice(); DAYS.forEach(d => d.gruppi.forEach(g => { if (!gr.includes(g)) gr.push(g); }));
+  D = {gruppi: gr, note: (s && s.note) || []};
+}
+useScheda(SCH);
+const nomeC = () => ((SCH && SCH.cliente) || '').trim();
+const LABC = () => (SCH && SCH.varC) || 'Corpo libero';
+const MESI = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+const GG = ['lun','mar','mer','gio','ven','sab','dom'];
+
+let wOff = 0;   // settimana mostrata: 0 = questa, -1 = la scorsa, solo indietro
+let state = {sessions: [], deleted: [], kg: []};
+const VARS = ['A','B','C'];
+const vlab = v => v === 'C' ? LABC() : 'var. ' + v, vtxt = v => v === 'C' ? LABC().toLowerCase() : v;
+const vsOf = day => (BY[day] && BY[day].vars) || ['A'];
+const vnext = (v, day) => { const vs = vsOf(day), i = vs.indexOf(v); return vs[(i + 1) % vs.length]; };
+const isLegs = day => !!BY[day] && BY[day].gruppi.filter(g => LEGS.includes(g)).length * 2 >= BY[day].gruppi.length;
+let ui = {day: null, variant: null, range: 30, checks: {}};
+try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && Array.isArray(s.sessions)) state = {sessions: s.sessions, deleted: s.deleted || [], kg: Array.isArray(s.kg) ? s.kg : []}; } catch (e) {}
+try { const u = JSON.parse(localStorage.getItem(UIKEY)); if (u) ui = Object.assign(ui, u); } catch (e) {}
+ui.chosen = null; // ad ogni apertura dell'app si sceglie di nuovo l'allenamento
+let demo = false, realState = null, realSch = null;
+const save = () => { if (demo) return; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+const saveUi = () => { try { localStorage.setItem(UIKEY, JSON.stringify(ui)); } catch (e) {} };
+
+// date locali
+const iso = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+const parse = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const today = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const diffDays = (a, b) => Math.round((parse(b) - parse(a)) / 864e5);
+const monday = d => addDays(d, -((d.getDay()+6)%7));
+const isoWeek = d => { const t = new Date(d); t.setDate(t.getDate()+3-((t.getDay()+6)%7)); const w1 = new Date(t.getFullYear(),0,4); return 1+Math.round(((t-w1)/864e5-3+((w1.getDay()+6)%7))/7); };
+const fmt = s => { const d = parse(s); return d.getDate() + ' ' + MESI[d.getMonth()]; };
+const sorted = () => [...state.sessions].sort((a,b) => a.date === b.date ? (a.at||0)-(b.at||0) : a.date < b.date ? -1 : 1);
+const lastOf = day => sorted().filter(s => s.day === day).pop();
+
+// sincronizzazione con l'account claude.ai (solo dentro claude.ai)
+const col = null;   // niente server: tutto resta nel telefono
+function setSync(){ $('sync').innerHTML = demo ? '<b class="t-g1">Dati di esempio</b>, niente viene salvato' : '<b>Salvato su questo telefono</b>, funziona anche senza internet'; }
+function push(s){ if (!col || demo) return; const b = {date: s.date, day: s.day, variant: s.variant, at: s.at || Date.now()}; if (s.q) b.q = s.q; if (s.cardio) b.cardio = s.cardio; if (s.abs) b.abs = s.abs; col.doc(s.id).set(b).catch(() => {}); }
+// qualità dell'allenamento: 1-3 stelle (toccare di nuovo la stessa stella la toglie)
+function setQuality(id, q){
+  const s = state.sessions.find(x => x.id === id); if (!s) return;
+  s.q = s.q === q ? 0 : q; save(); push(s); render();
+}
+// kg per esercizio: una voce al giorno per esercizio, storico per le ultime 3 volte
+const exKey = e => e.slug ? e.slug + (e.nome ? '|' + e.nome : '') : 'x|' + e.nome;
+const hkey = k => { let h = 5381; for (const c of k) h = ((h * 33) ^ c.charCodeAt(0)) >>> 0; return h.toString(36); };
+const fkg = v => (Math.round(v * 10) / 10).toString().replace('.', ',');
+function pushKg(k){ if (!col || demo) return; col.doc(k.id).set(Object.assign({kind: 'kg', date: k.date, key: k.key, kg: k.kg}, k.rip ? {rip: k.rip} : {})).then(() => { k.pending = false; save(); }).catch(() => {}); }
+function setKg(key, val, rip){
+  const t = iso(today()), id = 'kg_' + t + '_' + hkey(key);
+  const old = (state.kg || []).find(k => k.id === id);
+  const kg = val === undefined ? (old ? old.kg : 0) : val;
+  const r = rip === undefined ? (old ? old.rip : 0) : rip;
+  state.kg = (state.kg || []).filter(k => k.id !== id);
+  if (kg > 0 || r > 0) { const k = {id, date: t, key, kg: kg > 0 ? kg : 0, pending: true}; if (r > 0) k.rip = r; state.kg.push(k); pushKg(k); }
+  else if (col && !demo) col.doc(id).delete().catch(() => {});
+  save();
+}
+function kgHistory(key){ return (state.kg || []).filter(k => k.key === key).sort((a, b) => a.date < b.date ? 1 : -1); }
+function starsHtml(s, label, ro){
+  if (ro) return '<span class="stars ro" role="img" aria-label="' + (s.q || 0) + ' stelle su 3">' + [1,2,3].map(k => '<span class="st' + ((s.q || 0) >= k ? ' on' : '') + '">★</span>').join('') + '</span>';
+  let h = '<span class="stars" role="group" aria-label="' + (label || 'Qualità') + '">';
+  for (let k = 1; k <= 3; k++) h += '<button type="button" class="st' + ((s.q || 0) >= k ? ' on' : '') + '" data-star="' + s.id + '" data-q="' + k + '" aria-label="' + k + (k === 1 ? ' stella' : ' stelle') + '" aria-pressed="' + ((s.q || 0) >= k) + '">★</button>';
+  return h + '</span>';
+}
+const avgQ = list => { const r = list.filter(s => s.q); return r.length ? r.reduce((a, s) => a + s.q, 0) / r.length : null; };
+const fq = v => v.toFixed(1).replace('.', ',');
+function addSession(date, day, variant, extra){
+  const s = Object.assign({id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2,6), date, day, variant, at: Date.now(), pending: true}, extra || {});
+  state.sessions.push(s); save(); push(s); render(); return s;
+}
+function updateSession(id, extra){
+  const s = state.sessions.find(x => x.id === id); if (!s) return;
+  Object.assign(s, extra); if (!s.cardio) delete s.cardio; if (!s.abs) delete s.abs; save(); push(s); render(); return s;
+}
+// pagina di chiusura della sessione
+const CARDIO = {cyclette: 'Cyclette', tapis: 'Tapis roulant'};
+const ABSU = {rip: 'ripetizioni', serie: 'serie', min: 'minuti'};
+let closeQ = 0;
+function openClose(existingId){
+  const t = iso(today());
+  const ex = existingId ? state.sessions.find(x => x.id === existingId) : null;
+  const day = ex ? ex.day : ui.day, v = ex ? ex.variant : ui.variant, date = ex ? ex.date : t;
+  if (!BY[day]) { toast('Questo allenamento non è più nella scheda'); return; }
+  const list = BY[day][v] || [];
+  const ck = ex ? list.length : (ui.checks[t + day + v] || []).length;
+  const serie = list.reduce((a, e) => a + e.serie, 0);
+  const year = date.slice(0, 4);
+  const nYear = state.sessions.filter(x => x.date.slice(0, 4) === year && (!ex || x.id !== ex.id)).length + 1;
+  closeQ = ex ? (ex.q || 0) : 0;
+  const c = ex && ex.cardio, a = ex && ex.abs, d = parse(date);
+  $('pageC').innerHTML =
+    '<div class="eyebrow">' + (ex ? 'Riepilogo sessione' : 'Fine allenamento') + '</div>' +
+    '<div class="cert" style="--dc:var(--' + day + ')"><div class="stamp" id="stamp"' + (ex ? '' : ' hidden') + '>SESSIONE<br>CHIUSA<small>' + d.getDate() + ' ' + MESI[d.getMonth()] + '</small></div>' +
+      '<span class="eyebrow">' + GG[(d.getDay()+6)%7] + ' ' + d.getDate() + ' ' + MESI[d.getMonth()] + ' ' + d.getFullYear() + '</span>' +
+      '<span class="big t-' + day + '">' + esc(BY[day].nome) + '</span><span>Variante ' + v + ' · allenamento n° ' + nYear + ' del ' + year + '</span>' +
+      '<div class="facts"><div><span class="num">' + ck + '/' + list.length + '</span><small>esercizi spuntati</small></div><div><span class="num">' + serie + '</span><small>serie in scheda</small></div><div><span class="num">' + esc(BY[day].gruppi.slice(0,2).join(', ')) + '</span><small>muscoli</small></div></div></div>' +
+    '<div class="opt"><div class="rate2"><span class="hd">Com\'è andata?</span><span class="stars" id="cStars"></span></div></div>' +
+    '<div class="opt"><label class="hd"><input type="checkbox" id="cCardio"' + (c ? ' checked' : '') + '> Cardio</label>' +
+      '<div class="bd" id="cCardioBd"' + (c ? '' : ' hidden') + '><label class="u">Macchina<select id="cCardioT">' + Object.keys(CARDIO).map(k => '<option value="' + k + '"' + (c && c.t === k ? ' selected' : '') + '>' + CARDIO[k] + '</option>').join('') + '</select></label>' +
+      '<label class="u">Minuti<input type="number" id="cCardioM" inputmode="numeric" min="1" max="300" value="' + (c ? c.m : 20) + '"></label></div></div>' +
+    '<div class="opt"><label class="hd"><input type="checkbox" id="cAbs"' + (a ? ' checked' : '') + '> Addominali</label>' +
+      '<div class="bd" id="cAbsBd"' + (a ? '' : ' hidden') + '><label class="u">Quantità<input type="number" id="cAbsN" inputmode="numeric" min="1" max="2000" value="' + (a ? a.n : 50) + '"></label>' +
+      '<label class="u">Unità<select id="cAbsU">' + Object.keys(ABSU).map(k => '<option value="' + k + '"' + (a && a.u === k ? ' selected' : '') + '>' + ABSU[k] + '</option>').join('') + '</select></label></div></div>' +
+    '<div style="margin-top:auto;display:flex;flex-direction:column;gap:8px"><div class="done-msg" id="cMsg" hidden></div>' +
+      '<button type="button" class="primary" id="cGo" data-id="' + (ex ? ex.id : '') + '">' + (ex ? 'Salva modifiche' : 'Chiudi la sessione') + '</button>' +
+      '<button type="button" class="ghost" id="cBack">' + (ex ? 'Chiudi' : 'Torna alla scheda') + '</button></div>';
+  drawCloseStars();
+  if (!$('dlgC').open) $('dlgC').showModal();
+}
+function drawCloseStars(){ $('cStars').innerHTML = [1,2,3].map(k => '<button type="button" class="st' + (closeQ >= k ? ' on' : '') + '" data-cq="' + k + '" aria-label="' + k + (k === 1 ? ' stella' : ' stelle') + '">★</button>').join(''); }
+function readClose(){
+  const m = Math.round(+$('cCardioM').value), n = Math.round(+$('cAbsN').value);
+  return {q: closeQ,
+    cardio: $('cCardio').checked && m > 0 ? {t: $('cCardioT').value, m} : null,
+    abs: $('cAbs').checked && n > 0 ? {n, u: $('cAbsU').value} : null};
+}
+// sposta un allenamento a un altro giorno (con i kg segnati quel giorno per i suoi esercizi)
+function moveSession(id, nd){
+  const x = state.sessions.find(q => q.id === id); if (!x || !nd || nd === x.date || nd > iso(today())) return false;
+  const od = x.date, keys = new Set(((BY[x.day] || {})[x.variant] || []).map(exKey)), moved = [];
+  (state.kg || []).filter(k => k.date === od && keys.has(k.key)).forEach(k => {
+    state.kg = state.kg.filter(q => q.id !== k.id);
+    if (col && !demo) col.doc(k.id).delete().catch(() => {});
+    const nid = 'kg_' + nd + '_' + hkey(k.key);
+    if (!state.kg.some(q => q.id === nid)) { const n = Object.assign({}, k, {id: nid, date: nd, pending: true}); state.kg.push(n); moved.push(n); }
+  });
+  updateSession(id, {date: nd}); moved.forEach(pushKg); save(); return true;
+}
+function removeSession(id){
+  state.sessions = state.sessions.filter(s => s.id !== id);
+  if (col && !demo) { state.deleted.push(id); col.doc(id).delete().catch(() => {}); }
+  save(); render();
+}
+
+// modalità esempio: un anno di allenamenti finti, solo in memoria
+function demoSessions(){
+  const out = [], order = DAYS.map(d => d.id), lastV = {};
+  const t = today(); let k = 0, n = 0;
+  let mon = monday(addDays(t, -364));
+  const slots = [[0,1,3,5],[0,2,3,5],[0,1,3,4],[1,2,4,5],[0,2,4]];
+  for (let w = 0; mon <= t; w++, mon = addDays(mon, 7)) {
+    if (w % 9 === 4) continue;                      // ogni tanto una settimana saltata
+    for (const off of slots[w % slots.length]) {
+      const d = addDays(mon, off); if (d >= t) break;
+      const day = order[k++ % order.length];
+      const v = vnext(lastV[day] || vsOf(day).slice(-1)[0], day); lastV[day] = v;
+      out.push({id: 'demo' + (n++), date: iso(d), day, variant: v, at: n, q: [3,2,3,2,1,3,2,3,3,2,2][n % 11], cardio: n % 4 === 3 ? null : {t: n % 3 ? 'cyclette' : 'tapis', m: [20,15,25,20,30][n % 5]}, abs: day === 'g1' || day === 'g3' ? {n: [50,60,40][n % 3], u: 'rip'} : null});
+    }
+  }
+  return out;
+}
+function demoKg(ss){
+  const out = [], base = {}, seen = {};
+  ss.forEach((s, n) => (BY[s.day][s.variant] || []).forEach((e, i) => {
+    const key = exKey(e); if (base[key] === undefined) base[key] = [50, 40, 35, 25, 20, 30][i] * (isLegs(s.day) ? 1.6 : 1);
+    seen[key] = (seen[key] || 0) + 1;
+    if (seen[key] % 2 === 0) base[key] += 2.5;          // progressione: +2,5 kg ogni due volte
+    out.push({id: 'kg_' + s.date + '_' + hkey(key), date: s.date, key, kg: Math.round(base[key] / 2.5) * 2.5, rip: [10, 10, 12, 8, 10, 12, 8][(seen[key] + i) % 7]});
+  }));
+  return out;
+}
+function setDemo(on){
+  if (on === demo) return;
+  if (on) { realSch = SCH; if (!SCH) useScheda(C.esempio); realState = state; const ds = demoSessions(); state = {sessions: ds, deleted: [], kg: demoKg(ds)}; demo = true; }
+  else { state = realState || state; realState = null; demo = false; if (!realSch) useScheda(null); }
+  $('demoBar').hidden = !demo; ui.day = null; setSync(); render(); scrollTo(0, 0);
+}
+
+// consiglio del giorno
+function suggest(){
+  const t = iso(today()), mon = iso(monday(today()));
+  const wk = state.sessions.filter(s => s.date >= mon && s.date <= t);
+  const done = new Set(wk.map(s => s.day));
+  const all = sorted(), last = all[all.length-1];
+  const order = DAYS.map(d => d.id);
+  const start = last ? (order.indexOf(last.day)+1) % order.length : 0;
+  const rot = order.map((_, i) => order[(start+i) % order.length]);
+  let cand = rot.filter(d => !done.has(d));
+  if (!cand.length) cand = rot.slice();
+  const legs = ['g2','g4'];
+  if (last && legs.includes(last.day) && diffDays(last.date, t) <= 1) { const nl = cand.filter(d => !legs.includes(d)); if (nl.length) cand = nl; }
+  if (last && cand.length > 1) cand = cand.filter(d => d !== last.day);
+  const day = cand[0];
+  const lo = lastOf(day);
+  const variant = lo ? vnext(lo.variant, day) : vsOf(day)[0];
+  let why;
+  if (!all.length) why = 'Nessun allenamento segnato ancora: si parte dal primo giorno, variante A.';
+  else {
+    const missing = order.filter(d => !done.has(d)).map(d => BY[d].breve);
+    why = (missing.length ? 'Questa settimana ti manca ' + missing.join(', ') + '. ' : 'Settimana completa, riparti dal giro. ');
+    why += lo ? 'L\'ultima volta di ' + BY[day].breve + ' hai fatto ' + (lo.variant === 'C' ? LABC().toLowerCase() : 'la ' + lo.variant) + ' (' + fmt(lo.date) + '), oggi tocca ' + (variant === 'C' ? LABC().toLowerCase() : 'la ' + variant) + '.' : 'Prima volta per questo giorno.';
+  }
+  return {day, variant, why};
+}
+
+// obiettivo della settimana: oltre questo numero i riquadri diventano arancioni
+const obiettivo = () => Math.max(1, Math.min(7, +(SCH && SCH.obiettivo) || DAYS.length || 3));
+function renderWeek(){
+  const t = today(), tIso = iso(t), ref = addDays(t, 7 * wOff), mon = monday(ref);
+  const sun = addDays(mon, 6);
+  $('wk').textContent = 'Settimana ' + isoWeek(ref);
+  $('wNext').disabled = wOff >= 0; $('wPrev').disabled = wOff <= -104;
+  $('wkrange').textContent = mon.getDate() + ' ' + MESI[mon.getMonth()] + ' – ' + sun.getDate() + ' ' + MESI[sun.getMonth()];
+  let h = '';
+  const wkS = [];
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(mon, i), di = iso(d);
+    const ss = sorted().filter(s => s.date === di); wkS.push(...ss);
+    const chips = ss.map(s => '<span class="chip c-' + s.day + '">' + esc(BY[s.day] ? BY[s.day].breve : '?') + '<small>' + vlab(s.variant) + '</small></span>').join('');
+    h += '<button type="button" class="day' + (di === tIso ? ' today' : '') + (di > tIso ? ' future' : '') + (ss.length ? ' has' : '') + '" data-date="' + di + '" aria-label="' + GG[i] + ' ' + d.getDate() + (ss.length ? ', ' + ss.length + ' allenamento' : '') + '">' +
+         '<span class="dn">' + GG[i] + '</span><span class="dd">' + d.getDate() + '</span>' + chips + '</button>';
+  }
+  $('week').innerHTML = h;
+  const n = wkS.length, OB = obiettivo();
+  let bx = '';
+  for (let i = 0; i < Math.max(OB, n); i++) bx += '<span class="box' + (i >= OB ? ' on extra' : i < n ? ' on' : '') + '">' + (i >= OB ? '+' + (i - OB + 1) : i < n ? '✓' : i + 1) + '</span>';
+  // giorni alla fine dell'anno
+  const fine = new Date(t.getFullYear(), 11, 31), gl = Math.round((fine - t) / 864e5);
+  $('yleft').innerHTML = gl ? '<b>' + gl + '</b> ' + (gl === 1 ? 'giorno' : 'giorni') + ' alla fine del ' + t.getFullYear() : 'ultimo giorno del ' + t.getFullYear();
+  const y0 = t.getFullYear() + '-01-01', mine = sorted().map(q => q.date), first = mine[0] && mine[0] > y0 ? mine[0] : (mine[0] ? y0 : tIso);
+  const pre = 0, reg = state.sessions.filter(q => q.date >= y0).length;
+  $('ycount').innerHTML = '<b>' + (pre + reg) + '</b><span>volte<br>quest\'anno</span>';
+  $('yinfo').innerHTML = 'Allenamenti quest\'anno: <b>' + (pre + reg) + '</b>' + (pre ? ' (' + reg + ' segnate nell\'app)' : '');
+  $('boxes').innerHTML = bx + '<span class="bl"><b>' + n + '</b>/' + OB + '</span>';
+  $('boxes').setAttribute('aria-label', n + ' allenamenti su ' + OB + ' questa settimana');
+}
+
+function renderPick(){
+  const sg = suggest();
+  if (!ui.day || !BY[ui.day] || ui.pickDate !== iso(today())) { ui.day = sg.day; ui.variant = sg.variant; }
+  if (!vsOf(ui.day).includes(ui.variant)) ui.variant = vsOf(ui.day)[0];
+  // finché non scegli l'allenamento del giorno non si vedono varianti ed esercizi
+  const ch = ui.chosen === iso(today()), same = ui.day === sg.day && ui.variant === sg.variant;
+  $('why').textContent = (ch && same ? '' : 'Consigliato oggi: ' + BY[sg.day].nome + ' · ' + (sg.variant === 'C' ? LABC() : sg.variant) + '. ') + sg.why;
+  $('selName').textContent = ch ? BY[ui.day].nome : 'Scegli l\'allenamento';
+  $('pick').classList.toggle('vuota', !ch);
+  $('app').style.setProperty('--dc', ch ? 'var(--' + ui.day + ')' : 'var(--volt)'); $('pick').dataset.v = ch ? ui.variant : '';
+  $('seg').hidden = !ch || vsOf(ui.day).length < 2; $('daynote').hidden = !ch || !BY[ui.day].nota;
+  $('seg').style.gridTemplateColumns = 'repeat(' + vsOf(ui.day).length + ',1fr)'; $('vClab').textContent = LABC();
+  $('selDay').innerHTML = (ch ? '' : '<option value="" selected disabled>Scegli l\'allenamento</option>') + DAYS.map(d => '<option value="' + d.id + '"' + (ch && d.id === ui.day ? ' selected' : '') + '>' + esc(d.nome) + (d.id === sg.day ? '  ★' : '') + '</option>').join('');
+  VARS.forEach(v => {
+    $('v' + v).hidden = !vsOf(ui.day).includes(v);
+    $('v' + v).setAttribute('aria-pressed', ui.variant === v);
+    const l = sorted().filter(s => s.day === ui.day && s.variant === v).pop();
+    $('v' + v + 'last').textContent = l ? 'ultima: ' + fmt(l.date) : 'mai fatta';
+  });
+  $('daynote').textContent = BY[ui.day].nota;
+}
+
+function exName(e){ return e.nome || (e.slug && M[e.slug] ? M[e.slug].nome : ''); }
+function kgRow(e){
+  const key = exKey(e), t = iso(today()), h = kgHistory(key);
+  const now = h.find(k => k.date === t), prev = h.filter(k => k.date < t).slice(0, 3);
+  const pk = h.filter(k => k.date < t && k.kg > 0)[0];
+  const dm = d => { const x = parse(d); return x.getDate() + '/' + (x.getMonth() + 1); };
+  const last = prev.length ? prev.map(k => '<button type="button" class="lp" data-kgdel="' + k.id + '" aria-label="Voce del ' + dm(k.date) + ', tocca due volte per eliminarla"><b>' + (k.kg > 0 ? fkg(k.kg) + ' kg' : '–') + '</b>' + (k.rip ? ' x ' + k.rip : '') + ' <small>(' + dm(k.date) + ')</small></button>').join('') : '<em>prima volta</em>';
+  const reps = '<div class="reps" role="group" aria-label="ripetizioni medie">' + [8, 10, 12].map(r => '<button type="button" data-rip="' + r + '" data-key="' + esc(key) + '" class="' + (now && now.rip === r ? 'on' : '') + '" aria-pressed="' + !!(now && now.rip === r) + '" aria-label="' + r + ' ripetizioni">×' + r + '</button>').join('') + '</div>';
+  return '<div class="kgrow"><div class="kgbox"><button type="button" data-kgstep="-2.5" data-key="' + esc(key) + '" aria-label="meno 2,5 kg">−</button>' +
+    '<input type="text" inputmode="decimal" class="kgin" data-key="' + esc(key) + '" aria-label="kg di oggi" value="' + (now && now.kg > 0 ? fkg(now.kg) : '') + '" placeholder="' + (pk ? fkg(pk.kg) : '0') + '"><span>kg</span>' +
+    '<button type="button" data-kgstep="2.5" data-key="' + esc(key) + '" aria-label="più 2,5 kg">+</button></div>' +
+    reps + '<div class="last" aria-label="ultime 3 volte">' + last + '</div></div>';
+}
+function renderEx(){
+  const shown = ui.chosen === iso(today());
+  document.querySelector('.bar').hidden = !shown; $('exhelp').hidden = !shown;
+  if (!shown) { $('exs').innerHTML = ''; return; }
+  const list = BY[ui.day][ui.variant];
+  const ck = ui.checks[iso(today()) + ui.day + ui.variant] || [];
+  $('exs').innerHTML = list.map((e, i) => {
+    const m = e.slug ? M[e.slug] : null;
+    const name = exName(e);
+    const nm = esc(name), sp = nm.lastIndexOf(' ');
+    const nameBtn = m ? '<button type="button" class="ex-name" data-slug="' + e.slug + '" data-label="' + esc(name) + '" data-i="' + i + '">' + nm.slice(0, sp + 1) + '<span class="nw">' + nm.slice(sp + 1) + '<span class="cam" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"/><path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/></svg></span></span></button>'
+                      : '<span class="ex-name plain">' + esc(name) + '</span>';
+    const meta = m ? esc([m.marca, m.distretto].filter(Boolean).join(' · ')) : (ui.variant === 'C' ? LABC() + ' · ' : (C.palestra ? C.palestra + ' · ' : '')) + esc(e.gruppi.join(', '));
+    return '<li class="ex' + (ck.includes(i) ? ' done' : '') + '"><button type="button" class="tick" data-i="' + i + '" aria-label="Spunta esercizio ' + (i+1) + '" aria-pressed="' + ck.includes(i) + '">' + (i+1) + '</button>' +
+      '<div class="exh" style="min-width:0">' + nameBtn + '<div class="ex-meta">' + meta + '</div></div>' +
+      '<div class="sets"><span class="num">' + e.serie + '×' + esc(e.rip) + '</span><small>serie × rip.</small></div><p class="why">' + esc(e.perche) + '</p>' + kgRow(e) + '</li>';
+  }).join('');
+  const t = iso(today());
+  const dup = state.sessions.filter(s => s.date === t && s.day === ui.day && s.variant === ui.variant).pop();
+  const b = $('logBtn');
+  b.hidden = !!dup;
+  // un pallino per esercizio; "Termina" si sblocca dal 40% di esercizi spuntati
+  const need = Math.ceil(list.length * 0.4), done = ck.length, ok = done >= need;
+  b.disabled = !ok; b.classList.toggle('locked', !ok);
+  b.setAttribute('aria-label', ok ? 'Termina l\'allenamento' : 'Spunta almeno ' + need + ' esercizi per terminare');
+  b.innerHTML = '<span class="dots" aria-hidden="true">' + list.map((_, i) => '<span class="dot' + (ck.includes(i) ? ' on' : '') + '"></span>').join('') + '</span>' +
+    '<span class="tl">' + 'Termina' + '<small>' + (ok ? done + '/' + list.length + ' esercizi' : 'spunta ancora ' + (need - done)) + '</small></span>';
+  $('rate').hidden = !dup;
+  if (dup) $('rate').innerHTML = '<span class="lbl">Fatto ✓<small>' + esc(BY[ui.day].breve) + ' ' + vtxt(ui.variant) + (dup.cardio ? ' · ' + CARDIO[dup.cardio.t] + ' ' + dup.cardio.m + '′' : '') + (dup.abs ? ' · addome ' + dup.abs.n + ' ' + ABSU[dup.abs.u] : '') + '</small></span>' + starsHtml(dup, 'Qualità dell\'allenamento di oggi') + '<button type="button" class="ghost" data-recap="' + dup.id + '">Riepilogo</button>';
+}
+
+function stats(days){
+  const t = iso(today()), from = iso(addDays(today(), -(days-1)));
+  const ss = state.sessions.filter(s => s.date >= from && s.date <= t && BY[s.day]);
+  const sets = {}, sess = {};
+  D.gruppi.forEach(g => { sets[g] = 0; sess[g] = new Set(); });
+  ss.forEach(s => (BY[s.day][s.variant] || []).forEach(e => e.gruppi.forEach(g => { sets[g] += e.serie; sess[g].add(s.id); })));
+  return {ss, sets, sess, days};
+}
+function cardioLine(ss){
+  const c = ss.filter(s => s.cardio), a = ss.filter(s => s.abs);
+  if (!c.length && !a.length) return '';
+  const by = {}; c.forEach(s => by[s.cardio.t] = (by[s.cardio.t] || 0) + s.cardio.m);
+  const tot = Object.values(by).reduce((x, y) => x + y, 0);
+  return ' Cardio <b>' + tot + ' min</b>' + (Object.keys(by).length ? ' (' + Object.keys(by).map(k => CARDIO[k].toLowerCase() + ' ' + by[k]).join(', ') + ')' : '') + ' in ' + c.length + ' sessioni' +
+    (a.length ? ', addominali extra in ' + a.length + ' sessioni' : '') + '.';
+}
+function cardioBlock(ss){
+  const dm = d => { const x = parse(d); return x.getDate() + '/' + (x.getMonth() + 1); };
+  const rows = Object.keys(CARDIO).map(k => {
+    const l = ss.filter(s => s.cardio && s.cardio.t === k).sort((a, b) => a.date < b.date ? 1 : -1);
+    return l.length ? '<div class="crow"><div class="chead"><b>' + CARDIO[k] + '</b><span>' + l.length + (l.length === 1 ? ' volta' : ' volte') + ' · ' + l.reduce((x, s) => x + s.cardio.m, 0) + ' min</span></div>' +
+      '<div class="cdates">' + l.map(s => '<span><b>' + s.cardio.m + '′</b> <small>(' + dm(s.date) + ')</small></span>').join('') + '</div></div>' : '';
+  }).join('');
+  return rows ? '<div class="cardio"><small class="ctitle">Cardio</small>' + rows + '</div>' : '';
+}
+function renderStats(){
+  document.querySelectorAll('#rng button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.r === ui.range));
+  const st = stats(ui.range);
+  if (!st.ss.length) { $('statbody').innerHTML = '<div class="empty">Ancora nessun allenamento in questo periodo. Quando premi <b>Termina</b>, qui vedi quale gruppo alleni di più e quale alleni meglio. <button type="button" class="linkbtn" id="demoGo">Guarda un esempio</button></div>'; return; }
+  const rows = DAYS.map(d => ({d, n: st.ss.filter(x => x.day === d.id).length, q: avgQ(st.ss.filter(x => x.day === d.id))})).sort((a, b) => b.n - a.n);
+  const max = rows[0].n || 1, best = rows.filter(r => r.q !== null).sort((a, b) => b.q - a.q || b.n - a.n)[0];
+  const nm = d => '<b class="t-' + d.id + '">' + esc(d.nome) + '</b>';
+  let h = '<div class="top2"><div><small>Alleni di più</small>' + nm(rows[0].d) + '<span>' + rows[0].n + (rows[0].n === 1 ? ' sessione' : ' sessioni') + '</span></div>' +
+    '<div><small>Alleni meglio</small>' + (best ? nm(best.d) + '<span>' + fq(best.q) + ' ★ di media</span>' : '<span>Dai le stelle a fine allenamento</span>') + '</div></div>';
+  h += '<div class="bars">' + rows.map(r => '<div class="brow' + (r.n ? '' : ' zero') + '"><span>' + esc(r.d.nome) + '</span><div class="track"><div class="fill c-' + r.d.id + '" style="width:' + (r.n / max * 100).toFixed(1) + '%"></div></div><span class="v">' + r.n + (r.n === 1 ? ' sessione' : ' sessioni') + '</span></div>').join('') + '</div>';
+  h += cardioBlock(st.ss);
+  const a = st.ss.filter(s => s.abs); if (a.length) h += '<p class="extra">Addominali extra in ' + a.length + (a.length === 1 ? ' sessione' : ' sessioni') + '.</p>';
+  $('statbody').innerHTML = h;
+}
+
+let armed = null;
+function renderHist(){
+  const all = sorted().reverse().slice(0, 12);
+  $('hist').innerHTML = all.length ? all.map(s => '<li data-open="' + s.date + '" tabindex="0" role="button" aria-label="Apri il giorno ' + fmt(s.date) + '"><span class="d tile c-' + s.day + '"><b>' + parse(s.date).getDate() + '</b><small>' + MESI[parse(s.date).getMonth()].toUpperCase() + '</small></span><span><b class="t-' + s.day + '">' + esc(BY[s.day] ? BY[s.day].nome : s.day) + '</b> · ' + vtxt(s.variant) + '<br>' + starsHtml(s, '', true) + '</span><button type="button" class="del' + (armed === s.id ? ' armed' : '') + '" data-id="' + s.id + '" aria-label="' + (armed === s.id ? 'Conferma eliminazione' : 'Elimina') + '">' + (armed === s.id ? 'Conferma' : TRASH) + '</button></li>').join('')
+    : '<li><span class="d">—</span><span style="color:var(--muted)">Gli allenamenti segnati compaiono qui.</span><span></span></li>';
+}
+
+// icone Tabler Icons (MIT, github.com/tabler/tabler-icons)
+const TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>';
+const MESI_L = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+const GGL2 = ['lunedì','martedì','mercoledì','giovedì','venerdì','sabato','domenica'];
+function renderHero(){
+  const t = today(), tIso = iso(t), sg = suggest(), dn = state.sessions.filter(q => q.date === tIso).pop();
+  const dt = GGL2[(t.getDay() + 6) % 7] + ' ' + t.getDate() + ' ' + MESI_L[t.getMonth()];
+  $('heroSub').innerHTML = dt.charAt(0).toUpperCase() + dt.slice(1) + '<br>' + (dn && BY[dn.day] ? 'Oggi hai chiuso <b>' + esc(BY[dn.day].nome) + '</b> ✓' : 'Oggi tocca a <b>' + esc(BY[sg.day].nome) + '</b>');
+}
+function render(){
+  const has = DAYS.length > 0;
+  $('appName').textContent = C.app || 'Scheda';
+  const nm = demo && !realSch ? ((C.esempio && C.esempio.cliente) || '') : nomeC();
+  $('helloName').textContent = nm || 'campione'; $('avatar').textContent = (nm || C.app || 'S').trim().charAt(0).toUpperCase();
+  $('app').hidden = !has; $('welcome').hidden = has; document.querySelector('.bar').hidden = true;
+  if (!has) {
+    $('welCoach').textContent = [C.coach, C.palestra].filter(Boolean).join(' · ');
+    const t = today(), dt = GGL2[(t.getDay() + 6) % 7] + ' ' + t.getDate() + ' ' + MESI_L[t.getMonth()];
+    $('heroSub').innerHTML = dt.charAt(0).toUpperCase() + dt.slice(1) + '<br>Aspetto la tua scheda';
+    return;
+  }
+  renderHero(); renderWeek(); renderPick(); renderEx(); renderStats(); renderHist(); renderInfo();
+}
+// chi ti segue e quando è stata aggiornata la scheda
+function renderInfo(){
+  const s = demo && !realSch ? C.esempio : SCH;
+  $('schInfo').innerHTML = 'Scheda di <b>' + esc(C.coach || 'il tuo coach') + '</b>' + (s && s.data ? ', aggiornata il ' + fmt(s.data) : '') + (C.palestra ? ' · ' + esc(C.palestra) : '');
+  $('notes').innerHTML = D.note.map(n => '<li>' + esc(n) + '</li>').join('');
+}
+
+// foglio macchina
+function openMachine(slug, label, idx){
+  const m = M[slug]; if (!m) return;
+  const ex = idx !== undefined && BY[ui.day] ? BY[ui.day][ui.variant][+idx] : null, cm = ex && ex.come, gr = ex ? ex.gruppi : [];
+  const img = m.img ? '<div class="phw"><img class="photo" src="' + m.img + '" alt="' + esc(m.nome) + '"></div>'
+                    : '<div class="ph"><b>Foto in arrivo</b>La foto di questa macchina non è ancora stata scaricata.<a href="' + esc(m.url) + '" target="_blank" rel="noopener">Apri la scheda ufficiale</a></div>';
+  $('sheetM').innerHTML = '<div class="grab"></div>' + img +
+    '<div><div class="eyebrow">' + esc([m.marca, m.linea].filter(Boolean).join(' · ') || 'Macchina') + '</div><h3>' + esc(label || m.nome) + '</h3></div>' +
+    '<div class="ex-meta" style="font-size:14px">' + esc(m.distretto) + '</div>' +
+    (cm ? '<div class="eyebrow">Come usarla per ' + esc((gr.length > 1 ? gr.slice(0, -1).join(', ') + ' e ' + gr[gr.length - 1] : gr[0] || '').toLowerCase()) + '</div><ol>' + cm.map(x => '<li>' + esc(x) + '</li>').join('') + '</ol>'
+        : '<ol>' + m.esecuzione.map(x => '<li>' + esc(x) + '</li>').join('') + '</ol>' + (m.consiglio ? '<p class="tip">' + esc(m.consiglio) + '</p>' : '')) +
+    (m.url ? '<a href="' + esc(m.url) + '" target="_blank" rel="noopener">Scheda ufficiale sul sito</a>' : '') +
+    '<button type="button" class="ghost close" data-close="dlgM">Chiudi</button>';
+  $('dlgM').showModal();
+}
+// foglio giorno della settimana
+function openDay(date){
+  const ss = sorted().filter(s => s.date === date);
+  const d = parse(date);
+  $('sheetD').innerHTML = '<div class="grab"></div><h3>' + GG[(d.getDay()+6)%7] + ' ' + d.getDate() + ' ' + MESI[d.getMonth()] + '</h3>' +
+    (ss.length ? '<ul class="hist">' + ss.map(s => '<li><span class="d"></span><span><b class="t-' + s.day + '">' + esc(BY[s.day].nome) + '</b> · ' + vtxt(s.variant) + '<br>' + starsHtml(s) + ' <button type="button" class="linkbtn" data-recap="' + s.id + '">riepilogo</button></span><button type="button" class="del" data-id="' + s.id + '" data-in="day" aria-label="Elimina">' + TRASH + '</button><label class="mvrow">Data dell\'allenamento<input type="date" data-moveto="' + s.id + '" max="' + iso(today()) + '" value="' + s.date + '"></label></li>').join('') + '</ul>' : '<p class="extra">Nessun allenamento segnato in questo giorno.</p>') +
+    '<div class="eyebrow">Aggiungi</div><div class="addrow"><select id="addDay" aria-label="Allenamento">' + DAYS.map(x => '<option value="' + x.id + '">' + esc(x.nome) + '</option>').join('') + '</select>' +
+    '<select id="addVar" aria-label="Variante">' + VARS.map(v => '<option value="' + v + '">' + esc(v === 'C' ? LABC() : v) + '</option>').join('') + '</select></div>' +
+    '<button type="button" class="primary" id="addGo" data-date="' + date + '">Aggiungi allenamento</button>' +
+    '<button type="button" class="ghost close" data-close="dlgD">Chiudi</button>';
+  if (!$('dlgD').open) $('dlgD').showModal();
+}
+let tt;
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2200); }
+
+// eventi
+$('selDay').addEventListener('change', e => { if (!BY[e.target.value]) return; ui.day = e.target.value; ui.pickDate = ui.chosen = iso(today()); const l = lastOf(ui.day); ui.variant = l ? vnext(l.variant, ui.day) : vsOf(ui.day)[0]; saveUi(); renderPick(); renderEx(); });
+$('seg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; ui.variant = b.dataset.v; ui.pickDate = iso(today()); saveUi(); renderPick(); renderEx(); });
+$('rng').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; ui.range = +b.dataset.r; saveUi(); renderStats(); });
+$('exs').addEventListener('change', e => {
+  const inp = e.target.closest('.kgin'); if (!inp) return;
+  const v = parseFloat(inp.value.replace(',', '.'));
+  setKg(inp.dataset.key, isFinite(v) && v > 0 && v < 1000 ? Math.round(v * 10) / 10 : 0); renderEx();
+});
+$('exs').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.closest('.kgin')) e.target.blur(); });
+$('exs').addEventListener('click', e => {
+  const rb = e.target.closest('[data-rip]');
+  if (rb) { const cur = kgHistory(rb.dataset.key).find(k => k.date === iso(today())); setKg(rb.dataset.key, undefined, cur && cur.rip === +rb.dataset.rip ? 0 : +rb.dataset.rip); renderEx(); return; }
+  const stp = e.target.closest('[data-kgstep]');
+  if (stp) {
+    const inp = stp.parentNode.querySelector('.kgin');
+    const cur = parseFloat((inp.value || inp.placeholder).replace(',', '.')) || 0;
+    setKg(stp.dataset.key, Math.max(0, Math.round((cur + +stp.dataset.kgstep) * 10) / 10)); renderEx(); return;
+  }
+  const n = e.target.closest('.ex-name[data-slug]'); if (n) { hidePeek(); openMachine(n.dataset.slug, n.dataset.label, n.dataset.i); return; }
+  const t = e.target.closest('.tick'); if (!t) return;
+  const k = iso(today()) + ui.day + ui.variant, i = +t.dataset.i;
+  const a = ui.checks[k] || []; ui.checks = {[k]: a.includes(i) ? a.filter(x => x !== i) : a.concat(i)}; saveUi(); renderEx();
+});
+const goWeek = d => { const n = Math.min(0, Math.max(-104, wOff + d)); if (n === wOff) return; wOff = n; renderWeek(); };
+$('wPrev').addEventListener('click', () => goWeek(-1));
+$('wNext').addEventListener('click', () => goWeek(1));
+let tx = null;
+$('week').addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, {passive: true});
+$('week').addEventListener('touchend', e => { if (tx === null) return; const dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 55) { goWeek(dx > 0 ? -1 : 1); } }, {passive: true});
+$('week').addEventListener('click', e => { const b = e.target.closest('.day'); if (b) openDay(b.dataset.date); });
+$('logBtn').addEventListener('click', () => { ui.pickDate = iso(today()); saveUi(); openClose(); });
+$('dlgC').addEventListener('click', e => {
+  const st = e.target.closest('[data-cq]'); if (st) { closeQ = closeQ === +st.dataset.cq ? 0 : +st.dataset.cq; drawCloseStars(); return; }
+  if (e.target.id === 'cBack') { $('dlgC').close(); return; }
+  if (e.target.id === 'cGo') {
+    const x = readClose();
+    if (e.target.dataset.id) { updateSession(e.target.dataset.id, x); $('dlgC').close(); toast('Sessione aggiornata'); return; }
+    if (e.target.dataset.saved) { $('dlgC').close(); return; }
+    const ck0 = iso(today()) + ui.day + ui.variant; if (ui.checks[ck0]) { delete ui.checks[ck0]; saveUi(); }   // sessione salvata: le spunte ripartono da zero
+    const sn = addSession(iso(today()), ui.day, ui.variant, x);
+    e.target.dataset.saved = sn.id;
+    ui.chosen = ''; saveUi(); render();   // sessione chiusa: si riparte da "Scegli l'allenamento"
+    const stp = $('stamp'); stp.hidden = false; stp.classList.add('go');
+    $('cMsg').hidden = false; $('cMsg').textContent = 'Bravo, sessione chiusa. Ci vediamo alla prossima.';
+    e.target.textContent = 'Torna alla scheda'; $('cBack').hidden = true;
+    $('pageC').querySelectorAll('input,select,[data-cq]').forEach(el => el.disabled = true);
+  }
+});
+$('dlgC').addEventListener('change', e => { if (e.target.id === 'cCardio') $('cCardioBd').hidden = !e.target.checked; if (e.target.id === 'cAbs') $('cAbsBd').hidden = !e.target.checked; });
+document.addEventListener('change', e => { const m = e.target.closest('input[data-moveto]'); if (m && moveSession(m.dataset.moveto, m.value)) { if ($('dlgD').open) $('dlgD').close(); toast('Spostato al ' + fmt(m.value)); } });
+document.addEventListener('click', e => { const r = e.target.closest('[data-recap]'); if (r) { if ($('dlgD').open) $('dlgD').close(); openClose(r.dataset.recap); } });
+$('hist').addEventListener('click', e => { const li = e.target.closest('li[data-open]'); if (li && !e.target.closest('.del')) { openDay(li.dataset.open); return; } const b = e.target.closest('.del'); if (!b) return; if (armed === b.dataset.id) { armed = null; removeSession(b.dataset.id); toast('Eliminato'); } else { armed = b.dataset.id; renderHist(); } });
+let kgArmed = null;
+document.addEventListener('click', e => {
+  const lp = e.target.closest('[data-kgdel]'); if (!lp) { if (kgArmed) { kgArmed = null; renderEx(); } return; }
+  const id = lp.dataset.kgdel;
+  if (kgArmed === id) { kgArmed = null; state.kg = (state.kg || []).filter(k => k.id !== id); if (col && !demo) col.doc(id).delete().catch(() => {}); save(); renderEx(); toast('Voce eliminata'); return; }
+  kgArmed = id; renderEx(); const b = document.querySelector('[data-kgdel="' + id + '"]'); if (b) { b.classList.add('armed'); b.textContent = 'Elimina?'; }
+});
+document.addEventListener('click', e => {
+  const c = e.target.closest('[data-close]'); if (c) { $(c.dataset.close).close(); return; }
+  if (e.target.id === 'addGo') { const ad = $('addDay').value, av = vsOf(ad).includes($('addVar').value) ? $('addVar').value : vsOf(ad)[0]; addSession(e.target.dataset.date, ad, av); $('dlgD').close(); toast('Aggiunto il ' + fmt(e.target.dataset.date)); return; }
+  const dd = e.target.closest('.del[data-in="day"]'); if (dd) { if (dd.classList.contains('armed')) { removeSession(dd.dataset.id); $('dlgD').close(); toast('Eliminato'); } else { dd.classList.add('armed'); dd.textContent = 'Conferma'; } }
+});
+['dlgM','dlgD'].forEach(id => $(id).addEventListener('click', e => { if (e.target === $(id)) $(id).close(); }));
+// anteprima foto passando sopra (mouse)
+const peek = $('peek');
+function hidePeek(){ peek.hidden = true; }
+if (window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches) {
+  $('exs').addEventListener('mouseover', e => { const n = e.target.closest('.ex-name[data-slug]'); if (!n) return; const m = M[n.dataset.slug]; if (!m || !m.img) return; peek.innerHTML = '<img alt="" src="' + m.img + '">'; peek.hidden = false; const r = n.getBoundingClientRect(); peek.style.left = Math.min(r.left, innerWidth - 236) + 'px'; peek.style.top = (r.bottom + 8 + 230 > innerHeight ? r.top - 175 : r.bottom + 8) + 'px'; });
+  $('exs').addEventListener('mouseout', e => { if (e.target.closest('.ex-name')) hidePeek(); });
+}
+// backup
+$('bkCopy').addEventListener('click', () => {
+  const txt = JSON.stringify({scheda: 'scheda-pt', cliente: nomeC(), kg: (state.kg || []).map(({id,date,key,kg,rip}) => ({id,date,key,kg,rip})), sessions: state.sessions.map(({id,date,day,variant,at,q,cardio,abs}) => ({id,date,day,variant,at,q,cardio,abs}))});
+  const done = () => toast('Backup copiato');
+  const fallback = () => { $('bkIn').value = txt; $('bkIn').select(); toast('Seleziona e copia il testo'); };
+  try { navigator.clipboard.writeText(txt).then(done, fallback); } catch (e) { fallback(); }
+});
+$('bkImp').addEventListener('click', () => {
+  try {
+    const j = JSON.parse($('bkIn').value); const have = new Set(state.sessions.map(s => s.id)); let n = 0;
+    (j.sessions || []).forEach(s => { if (s && s.id && s.date && BY[s.day] && VARS.includes(s.variant) && !have.has(s.id)) { const x = {id: s.id, date: s.date, day: s.day, variant: s.variant, at: s.at || Date.now(), q: [1,2,3].includes(s.q) ? s.q : 0, pending: true}; if (s.cardio && CARDIO[s.cardio.t] && s.cardio.m > 0) x.cardio = {t: s.cardio.t, m: Math.round(s.cardio.m)}; if (s.abs && ABSU[s.abs.u] && s.abs.n > 0) x.abs = {n: Math.round(s.abs.n), u: s.abs.u}; state.sessions.push(x); push(x); n++; } });
+    const hk = new Set((state.kg || []).map(k => k.id)); let nk = 0;
+    (j.kg || []).forEach(k => { if (k && k.id && k.date && k.key && (k.kg > 0 || k.rip > 0) && !hk.has(k.id)) { const x = {id: k.id, date: k.date, key: k.key, kg: +k.kg || 0, pending: true}; if ([8,10,12].includes(k.rip)) x.rip = k.rip; state.kg.push(x); pushKg(x); nk++; } });
+    save(); render(); $('bkIn').value = ''; toast(n || nk ? 'Importati ' + n + ' allenamenti e ' + nk + ' pesi' : 'Niente di nuovo da importare');
+  } catch (e) { toast('Testo non valido: incolla il backup intero'); }
+});
+// a mezzanotte la settimana e il consiglio si aggiornano
+let lastDay = iso(today());
+setInterval(() => { if (iso(today()) !== lastDay) { lastDay = iso(today()); ui.day = null; wOff = 0; render(); } }, 60000);
+let hiddenAt = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { hiddenAt = Date.now(); return; }
+  if (iso(today()) !== lastDay) { lastDay = iso(today()); ui.day = null; render(); }
+  else if (hiddenAt && Date.now() - hiddenAt > 30 * 60 * 1000 && ui.chosen) { ui.chosen = null; saveUi(); render(); }   // riaperta dopo mezz'ora: si sceglie di nuovo
+});
+
+document.addEventListener('click', e => {
+  const st = e.target.closest('.st[data-star]'); if (!st) return;
+  const inDay = st.closest('#sheetD'); setQuality(st.dataset.star, +st.dataset.q);
+  if (inDay) { const sx = state.sessions.find(x => x.id === st.dataset.star); if (sx) openDay(sx.date); }
+});
+document.addEventListener('click', e => { if (e.target.id === 'demoGo' || e.target.id === 'demoGo2' || e.target.id === 'demoGo3') setDemo(true); if (e.target.id === 'demoExit') setDemo(false); });
+setSync(); render();
+if (location.hash === '#esempio') setDemo(true);
+else checkLink();
+
+// resoconto per il coach: ultimi 7 giorni, già scritto, da mandare su WhatsApp
+function reportText(){
+  const t = iso(today()), from = iso(addDays(today(), -6)), m30 = iso(addDays(today(), -29));
+  const wk = sorted().filter(s => s.date >= from && s.date <= t), mo = state.sessions.filter(s => s.date >= m30 && s.date <= t);
+  const dm = d => { const x = parse(d); return GG[(x.getDay() + 6) % 7] + ' ' + x.getDate() + ' ' + MESI[x.getMonth()]; };
+  let txt = 'Resoconto di ' + (nomeC() || 'un cliente') + ', ' + fmt(from) + ' – ' + fmt(t) + '\n' + wk.length + ' allenamenti su ' + obiettivo() + ' previsti\n';
+  wk.forEach(s => {
+    const d = BY[s.day];
+    txt += '\n• ' + dm(s.date) + ': ' + (d ? d.nome : 'allenamento') + ' (' + vtxt(s.variant) + ')' + (s.q ? ' ' + '★'.repeat(s.q) : '') + (s.cardio ? ', ' + CARDIO[s.cardio.t].toLowerCase() + ' ' + s.cardio.m + ' min' : '') + (s.abs ? ', addominali ' + s.abs.n + ' ' + ABSU[s.abs.u] : '');
+    if (d) (d[s.variant] || []).forEach(e => { const k = (state.kg || []).find(x => x.date === s.date && x.key === exKey(e)); if (k && (k.kg || k.rip)) txt += '\n   ' + exName(e) + ': ' + (k.kg ? fkg(k.kg) + ' kg' : '') + (k.rip ? ' x ' + k.rip : ''); });
+  });
+  if (!wk.length) txt += '\nNessun allenamento segnato in questi giorni.';
+  const q = avgQ(mo);
+  txt += '\n\nUltimi 30 giorni: ' + mo.length + ' allenamenti' + (q ? ', qualità media ' + fq(q) + ' ★' : '') + '.';
+  return txt;
+}
+$('repGo').addEventListener('click', () => {
+  const txt = reportText();
+  if (C.whatsapp) { location.href = 'https://wa.me/' + String(C.whatsapp).replace(/\D/g, '') + '?text=' + encodeURIComponent(txt); return; }
+  if (navigator.share) { navigator.share({text: txt}).catch(() => {}); return; }
+  try { navigator.clipboard.writeText(txt).then(() => toast('Resoconto copiato'), () => toast('Copia non riuscita')); } catch (e) { toast('Copia non riuscita'); }
+});
+
+// scheda nuova dal coach (link #s=...): si mostra cosa contiene e si conferma; lo storico resta
+async function checkLink(){
+  const m = location.hash.match(/^#s=([zj][A-Za-z0-9_-]+)/); if (!m) return false;
+  history.replaceState(null, '', location.pathname + location.search);
+  let s;
+  try { s = await decodeScheda(m[1]); } catch (e) { toast('Link della scheda non valido: chiedi al coach di rimandarlo'); return false; }
+  const days = expand(s), same = SCH && JSON.stringify(SCH) === JSON.stringify(s);
+  if (same) { toast('Hai già questa scheda'); return true; }
+  $('newSch').innerHTML = '<div class="eyebrow">' + esc(C.coach || 'Il tuo coach') + (SCH ? ' ti ha aggiornato la scheda' : ' ti ha mandato la scheda') + '</div>' +
+    '<h2>' + (s.cliente ? 'Ciao ' + esc(s.cliente) : 'La tua scheda') + '</h2>' +
+    '<p>' + days.length + (days.length === 1 ? ' allenamento' : ' allenamenti') + ', ' + (+s.obiettivo || days.length) + ' a settimana:</p>' +
+    '<div class="days">' + days.map(d => '<span class="chip c-' + d.id + '">' + esc(d.nome) + '</span>').join('') + '</div>' +
+    (SCH ? '<p class="extra">Il tuo storico, i pesi e le stelle restano.</p>' : '<p class="extra">Si salva in questo telefono e funziona anche senza internet.</p>') +
+    '<button type="button" class="primary" id="nsOk">' + (SCH ? 'Usa la scheda nuova' : 'Inizia') + '</button>' +
+    (SCH ? '<button type="button" class="ghost" id="nsNo">Tieni quella di prima</button>' : '');
+  $('newSch').hidden = false;
+  $('newSch').onclick = e => {
+    if (e.target.id === 'nsOk') { if (demo) setDemo(false); try { localStorage.setItem(SKEY, JSON.stringify(s)); } catch (err) {} useScheda(s); ui.day = null; ui.chosen = null; saveUi(); $('newSch').hidden = true; render(); scrollTo(0, 0); toast('Scheda salvata'); }
+    if (e.target.id === 'nsNo') $('newSch').hidden = true;
+  };
+  return true;
+}
+window.addEventListener('hashchange', checkLink);
+
+})();
+</script>
+
+<script>if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  let had = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had) location.reload(); had = true; });
+  navigator.serviceWorker.register('sw.js').then(r => { document.addEventListener('visibilitychange', () => { if (!document.hidden) r.update(); }); });
+}</script>
+</body></html>
