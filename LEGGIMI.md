@@ -11,6 +11,8 @@ Prodotto da vendere una tantum ai PT, ricavato dall'app schede di giulio. Online
 
 Come viaggia la scheda: il PT la compone in `coach.html`, l'app la comprime (deflate) e la mette nel link dopo `#s=`. La parte dopo `#` non arriva a nessun server. Il cliente conferma e la scheda resta in localStorage; storico e pesi sono separati, quindi un link nuovo aggiorna la scheda senza perdere niente.
 
+Catalogo dei produttori (`catalogo/`): `catalogo.json` (2.180 macchine da forza di 12 marchi, circa 50 KB compresso) e `catalogo/foto/<marca>/<id>.jpg` (circa 67 MB). Non fa parte della copia offline: la pagina Coach lo scarica quando il PT cerca una macchina e chiede le foto con `?c` (non restano nel telefono del PT). Le macchine scelte viaggiano nel link (`mac`: nome, marca, linea, muscoli, foto, link ufficiale); l'app del cliente salva solo quelle foto nella cache `catalogo-foto`, che sopravvive ai cambi di versione. Si rigenera con `python3 strumenti/crea_catalogo.py /mnt/project-files/macchinari/` dal catalogo raccolto nel progetto (fonti e note in macchinari/RICERCA-PRODUTTORI.md). Le foto sono dei produttori: prima di vendere l'app, chiedere il permesso ai marchi o ai distributori.
+
 Prova in locale: `python3 -m http.server 8765` nella cartella, poi http://localhost:8765/coach.html.
 
 ## Prova a tempo (facoltativa)

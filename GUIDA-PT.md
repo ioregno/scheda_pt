@@ -48,6 +48,7 @@ Per aggiornare l'app: trascini di nuovo la cartella su Netlify (Deploys, poi tra
 4. Per ogni allenamento: nome, una nota se serve, e gli esercizi. Ogni esercizio può essere una macchina della tua libreria (con foto e spiegazione) o un esercizio libero.
 5. **Varianti A, B e C**: puoi fare fino a 3 versioni dello stesso allenamento, stessi muscoli su macchine diverse. L'app le alterna da sola. Se lasci vuote B e C, il cliente vede solo la A. Il tasto "Copia da A" ti fa partire dalla A e cambi solo le macchine.
 6. **Duplica** crea una copia della scheda per un altro cliente.
+7. **Catalogo dei produttori**: nel foglio dell'esercizio tocca "Cerca tra tutte le macchine dei produttori". Trovi più di 2.000 macchine da forza di Technogym, Panatta, Life Fitness, Hammer Strength, Cybex, Matrix, Precor, Impulse, gym80, Diamond, Nautilus e Lacertosus: cerca per nome, marca (la ricorda) e muscolo. Serve internet. La macchina scelta va al cliente con la sua foto, che si salva nel suo telefono quando apre il link: in palestra la vede anche offline.
 
 Le schede che crei stanno nel browser che usi per la pagina Coach. **Scarica un backup ogni tanto** (in fondo alla lista clienti): serve se cambi telefono o se il browser viene svuotato.
 

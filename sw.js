@@ -3,7 +3,7 @@
 importScripts('config.js');
 const VER = (self.CONFIG && self.CONFIG.versione) || '1';
 const CACHE = 'scheda-pt-' + VER;
-const FILES = ['./', 'index.html', 'coach.html', 'prova.html', 'tema.css', 'config.js', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png']
+const FILES = ['./', 'index.html', 'coach.html', 'prova.html', 'tema.css', 'tono.js', 'config.js', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png']
   .concat(((self.CONFIG && self.CONFIG.macchine) || []).map(m => m.foto).filter(Boolean));
 self.addEventListener('install', e => {
   // una foto mancante non deve bloccare tutto: ognuna si salva per conto suo
@@ -14,6 +14,12 @@ self.addEventListener('activate', e => {
 });
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET' || !e.request.url.startsWith(self.location.origin)) return;
+  // foto del catalogo dei produttori: prima dal telefono, poi dalla rete (cache a parte, resta anche quando cambia la versione)
+  // (la pagina Coach chiede le foto con ?c: quelle passano dalla rete e non riempiono il telefono del coach)
+  if (e.request.url.includes('/catalogo/foto/') && !e.request.url.includes('?c')) {
+    e.respondWith(caches.open('catalogo-foto').then(c => c.match(e.request).then(r => r || fetch(e.request).then(n => { if (n.ok) c.put(e.request, n.clone()); return n; }))));
+    return;
+  }
   e.respondWith(fetch(e.request).then(r => { if (r.ok) { const cp = r.clone(); caches.open(CACHE).then(c => c.put(e.request, cp)); } return r; })
     .catch(() => caches.match(e.request, {ignoreSearch: true}).then(r => r || caches.match('index.html'))));
 });

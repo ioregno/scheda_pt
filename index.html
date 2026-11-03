@@ -6,6 +6,7 @@
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png">
 <title>Scheda</title>
 <link rel="stylesheet" href="tema.css">
+<script src="tono.js"></script>
 </head><body>
 
 <div class="demobar" id="demoBar" hidden><span><b>Esempio</b>: un anno di allenamenti finti, non viene salvato nulla.</span><button type="button" class="ghost" id="demoExit">Esci</button></div>
@@ -117,7 +118,19 @@ async function decodeScheda(code){
 let SCH = null;
 try { SCH = JSON.parse(localStorage.getItem(SKEY)); } catch (e) {}
 // dalla forma compatta del link a quella usata dall'app
+// macchine prese dal catalogo dei produttori: viaggiano dentro la scheda (s.mac), con la foto in catalogo/foto/
+function addMac(s){
+  const x = s && s.mac; if (!x) return;
+  Object.keys(x).forEach(id => { if (M[id]) return; const o = x[id] || {}; M[id] = {id, nome: o.n || id, marca: o.b || '', linea: o.l || '', distretto: o.d || '', gruppi: o.g || [], foto: o.f || '', img: o.f || '', url: o.u || ''}; });
+}
+// le foto della scheda si salvano nel telefono appena arriva, così in palestra si vedono anche senza internet
+function cacheFoto(s){
+  if (!s || !s.mac || !window.caches) return;
+  const urls = Object.values(s.mac).map(o => o && o.f).filter(Boolean);
+  caches.open('catalogo-foto').then(c => Promise.all(urls.map(u => c.match(u).then(r => r || c.add(u)).catch(() => {})))).catch(() => {});
+}
 function expand(s){
+  addMac(s);
   const out = [];
   (s.giorni || []).forEach((g, gi) => {
     const d = {id: /^g[1-6]$/.test(g.id) ? g.id : 'g' + (gi + 1), nome: g.nome || 'Allenamento ' + (gi + 1), nota: g.nota || ''};
@@ -139,7 +152,7 @@ function useScheda(s){
   const gr = (C.gruppi || []).slice(); DAYS.forEach(d => d.gruppi.forEach(g => { if (!gr.includes(g)) gr.push(g); }));
   D = {gruppi: gr, note: (s && s.note) || []};
 }
-useScheda(SCH);
+useScheda(SCH); cacheFoto(SCH);
 const nomeC = () => ((SCH && SCH.cliente) || '').trim();
 const LABC = () => (SCH && SCH.varC) || 'Corpo libero';
 const MESI = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
@@ -519,7 +532,7 @@ function openMachine(slug, label, idx){
     '<div><div class="eyebrow">' + esc([m.marca, m.linea].filter(Boolean).join(' · ') || 'Macchina') + '</div><h3>' + esc(label || m.nome) + '</h3></div>' +
     '<div class="ex-meta" style="font-size:14px">' + esc(m.distretto) + '</div>' +
     (cm ? '<div class="eyebrow">Come usarla per ' + esc((gr.length > 1 ? gr.slice(0, -1).join(', ') + ' e ' + gr[gr.length - 1] : gr[0] || '').toLowerCase()) + '</div><ol>' + cm.map(x => '<li>' + esc(x) + '</li>').join('') + '</ol>'
-        : '<ol>' + m.esecuzione.map(x => '<li>' + esc(x) + '</li>').join('') + '</ol>' + (m.consiglio ? '<p class="tip">' + esc(m.consiglio) + '</p>' : '')) +
+        : (m.esecuzione && m.esecuzione.length ? '<ol>' + m.esecuzione.map(x => '<li>' + esc(x) + '</li>').join('') + '</ol>' : '<p class="extra">Se non sai come regolarla, chiedi al tuo coach.</p>') + (m.consiglio ? '<p class="tip">' + esc(m.consiglio) + '</p>' : '')) +
     (m.url ? '<a href="' + esc(m.url) + '" target="_blank" rel="noopener">Scheda ufficiale sul sito</a>' : '') +
     '<button type="button" class="ghost close" data-close="dlgM">Chiudi</button>';
   $('dlgM').showModal();
@@ -695,7 +708,7 @@ async function checkLink(){
     (SCH ? '<button type="button" class="ghost" id="nsNo">Tieni quella di prima</button>' : '');
   $('newSch').hidden = false;
   $('newSch').onclick = e => {
-    if (e.target.id === 'nsOk') { if (demo) setDemo(false); try { localStorage.setItem(SKEY, JSON.stringify(s)); } catch (err) {} useScheda(s); ui.day = null; ui.chosen = null; saveUi(); $('newSch').hidden = true; render(); scrollTo(0, 0); toast('Scheda salvata'); }
+    if (e.target.id === 'nsOk') { if (demo) setDemo(false); try { localStorage.setItem(SKEY, JSON.stringify(s)); } catch (err) {} useScheda(s); cacheFoto(s); ui.day = null; ui.chosen = null; saveUi(); $('newSch').hidden = true; render(); scrollTo(0, 0); toast('Scheda salvata'); }
     if (e.target.id === 'nsNo') $('newSch').hidden = true;
   };
   return true;
