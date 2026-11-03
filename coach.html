@@ -237,7 +237,24 @@ let ed = null;   // {gi, v, i, e}
 const pk = {step: 'g', g: '', b: '', q: ''};
 let myB = (() => { try { return localStorage.getItem('coach-pt-marca') || ''; } catch (e) { return ''; } })();
 const LIBNAME = 'La tua libreria';
-const PGR = GRUPPI.concat(['Adduttori', 'Total body']).filter((x, i, a) => a.indexOf(x) === i);
+// macro-gruppi per la scelta della macchina (richiesta di giulio): si guarda il primo muscolo della macchina
+const MACRO = [
+  {n: 'Gambe', g: ['Quadricipiti', 'Femorali', 'Glutei', 'Polpacci', 'Adduttori'],
+   top: [/leg press|pressa|piedi/, /leg extension|estensi/, /leg curl|curl gambe|femoral/, /hack|squat|pendul/, /adduct|abduct|addutt|abdutt|inner|outer|thigh/, /glute|hip|kick|gluteo|slancio|booty/, /calf|polpacc/]},
+  {n: 'Petto e tricipiti', g: ['Petto', 'Tricipiti'],
+   top: [/chest press|bench press|distension|vertical press|panca piana/, /pec|pek|fly|flight|butterfly|croci|pectoral|chest/, /incline|inclinat/, /decline|declinat/, /dip/, /tricep|tricip|french|push ?down|arm ext/]},
+  {n: 'Schiena e bicipiti', g: ['Schiena', 'Bicipiti', 'Lombari'],
+   top: [/lat |lat$|pulldown|pull down|lat machine|lat pull/, /low row|seated row|row|rematore|pulley/, /pull ?over/, /t-bar|t bar/, /chin|assist|trazion/, /bicep|bicip|arm curl|curl/, /back ext|lower back|lombar|hyperext|iperest/]},
+  {n: 'Spalle', g: ['Spalle', 'Trapezio'],
+   top: [/shoulder press|overhead|military|lento|spinte/, /lateral|alzate|deltoid/, /rear|reverse|posterior/, /shrug|trapez/]},
+  {n: 'Addome', g: ['Addominali'],
+   top: [/abdominal|crunch|addomin|\babs?\b/, /rotar|torso|obliqu|twist/, /knee raise|captain|vertical knee|ginocch/]},
+  {n: 'Cavi, panche e rack', g: ['Total body'],
+   top: [/crossover|functional|dual adjust|pulley|cavi|cable/, /smith|multipower/, /power rack|half rack|squat rack|rack|gabbia|cage/, /bench|panca/, /multi|jungle|station|stazion/]}
+];
+const macroOf = m => { const g = (m.gruppi || [])[0]; const x = MACRO.find(o => o.g.includes(g)); return x ? x.n : ''; };
+// quanto è "principale" una macchina: posizione della prima parola chiave trovata nel nome (99 = meno conosciuta)
+const rankOf = (m, mac) => { const o = MACRO.find(x => x.n === mac), n = (m.nome || '').toLowerCase(); if (!o) return 99; const i = o.top.findIndex(r => r.test(n)); return i < 0 ? 99 : i + (/inclin|declin/.test(n) ? .5 : 0); };
 function pool(){
   const lib = Object.values(M).filter(m => LIB.has(m.id)).map(m => Object.assign({}, m, {lib: true}));
   return lib.concat(CAT || []);
@@ -258,19 +275,20 @@ function drawPick(){
   if (pk.step === 'g') {
     h += '<h3>Che muscolo alleni?</h3>' +
       '<label class="f"><input id="pkQ" type="search" value="' + esc(pk.q) + '" placeholder="Oppure cerca per nome: chest press, leg curl…" autocomplete="off"></label>' +
-      '<div id="pkBody">' + (pk.q ? pickSearch(all) : '<div class="gtiles">' + PGR.map(g => { const n = all.filter(m => (m.gruppi || [])[0] === g).length; return n ? '<button type="button" data-pg="' + esc(g) + '"><b>' + esc(g) + '</b><small>' + n + '</small></button>' : ''; }).join('') + '</div>' +
+      '<div id="pkBody">' + (pk.q ? pickSearch(all) : '<div class="gtiles">' + MACRO.map(o => { const n = all.filter(m => macroOf(m) === o.n).length; return n ? '<button type="button" data-pg="' + esc(o.n) + '"><b>' + esc(o.n) + '</b><small>' + n + '</small></button>' : ''; }).join('') + '</div>' +
         (CAT ? '' : '<p class="hint">Carico il catalogo dei produttori… (serve internet)</p>')) + '</div>' +
       '<button type="button" class="ghost" data-x="free">Esercizio senza macchina</button>';
   } else if (pk.step === 'b') {
-    const by = {}; all.filter(m => (m.gruppi || [])[0] === pk.g).forEach(m => { const b = brandOf(m); by[b] = (by[b] || 0) + 1; });
+    const by = {}; all.filter(m => macroOf(m) === pk.g).forEach(m => { const b = brandOf(m); by[b] = (by[b] || 0) + 1; });
     const names = Object.keys(by).sort((a, b) => (a === LIBNAME ? -2 : a === myB ? -1 : 0) - (b === LIBNAME ? -2 : b === myB ? -1 : 0) || a.localeCompare(b));
     h += '<button type="button" class="back" data-pstep="g">‹ Muscoli</button><h3>' + esc(pk.g) + '</h3><p class="hint">Scegli la marca della macchina.</p>' +
       '<div class="blist">' + names.map(b => '<button type="button" data-pb="' + esc(b) + '"><b>' + esc(b) + '</b>' + (b === myB ? '<em>ultima usata</em>' : '') + '<small>' + by[b] + '</small></button>').join('') + '</div>';
   } else {
-    const list = all.filter(m => (m.gruppi || [])[0] === pk.g && brandOf(m) === pk.b);
-    const lines = {}; list.forEach(m => (lines[m.linea || ''] = lines[m.linea || ''] || []).push(m));
+    const list = all.filter(m => macroOf(m) === pk.g && brandOf(m) === pk.b).map(m => Object.assign({}, m, {rk: rankOf(m, pk.g)}));
+    list.sort((a, b) => a.rk - b.rk || (a.linea || '').localeCompare(b.linea || '') || a.nome.localeCompare(b.nome));
+    const parti = [['Le più usate', list.filter(m => !m.stato && m.rk < 99)], ['Altre', list.filter(m => !m.stato && m.rk === 99)], ['Fuori produzione', list.filter(m => m.stato)]].filter(p => p[1].length);
     h += '<button type="button" class="back" data-pstep="b">‹ ' + esc(pk.g) + '</button><h3>' + esc(pk.b) + '</h3>' +
-      Object.keys(lines).sort((a, b) => lines[a].every(m => m.stato) - lines[b].every(m => m.stato) || a.localeCompare(b)).map(l => (l ? '<div class="eyebrow">' + esc(l) + '</div>' : '') + '<ul class="catres">' + lines[l].map(machRow).join('') + '</ul>').join('');
+      parti.map(p => (parti.length > 1 ? '<div class="eyebrow">' + p[0] + ' · ' + p[1].length + '</div>' : '') + '<ul class="catres">' + p[1].map(machRow).join('') + '</ul>').join('');
   }
   h += '<button type="button" class="ghost close" data-x="' + (ed.i === null && !ed.e.m && !ed.e.n ? 'no' : 'back') + '">' + (ed.i === null && !ed.e.m && !ed.e.n ? 'Annulla' : 'Indietro') + '</button>';
   sh.innerHTML = h;
@@ -329,7 +347,7 @@ $('dlg').addEventListener('click', e => {
     drawEx(); return;
   }
   const b = e.target.closest('[data-x]'); if (!b) return;
-  if (b.dataset.x === 'pick') { readEx(); pk.step = ed.e.m && M[ed.e.m] && (M[ed.e.m].gruppi || [])[0] ? 'b' : 'g'; pk.g = ed.e.m && M[ed.e.m] ? (M[ed.e.m].gruppi || [])[0] || '' : ''; pk.q = ''; drawPick(); return; }
+  if (b.dataset.x === 'pick') { readEx(); pk.g = ed.e.m && M[ed.e.m] ? macroOf(M[ed.e.m]) : ''; pk.step = pk.g ? 'b' : 'g'; pk.q = ''; drawPick(); return; }
   if (b.dataset.x === 'free') { ed.e.m = ''; drawEx(); setTimeout(() => $('exN') && $('exN').focus(), 50); return; }
   if (b.dataset.x === 'back') { drawEx(); return; }
   const c = get(cur), g = c.giorni[ed.gi];

@@ -367,10 +367,13 @@ h1,h2,h3,.hello,.selname,.wmid h2,.ycount b,.top2 b,.chead b,.cert .big,summary{
 .wmid .eyebrow{letter-spacing:0!important;text-transform:none!important;font-size:12px}
 .box,.boxes .bl b,.cert .facts .num{font-family:var(--body)!important}
 
-/* Toni di prova (pulsante in alto a destra, tono.js): nero = Champagne qui sopra, grafite = scuro più morbido, avorio = chiaro */
-.tonobtn{margin-left:auto;margin-right:10px;width:34px;height:34px;border-radius:50%;border:1px solid color-mix(in srgb,var(--hero-ink) 25%,transparent);background:transparent;color:var(--hero-ink);display:grid;place-items:center;padding:0}
-#tonoMsg{position:fixed;left:50%;top:calc(64px + env(safe-area-inset-top,0px));transform:translate(-50%,-8px);z-index:50;background:var(--raise);color:var(--ink);border:1px solid var(--line2);border-radius:999px;padding:8px 16px;font:500 13px/1.2 var(--body);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
-#tonoMsg.on{opacity:1;transform:translate(-50%,0)}
+/* Interruttore chiaro/scuro in alto a destra (tono.js): avorio = chiaro, grafite = scuro morbido. Il nero Champagne qui sopra resta solo come base. */
+.tonosw{all:unset;box-sizing:border-box;cursor:pointer;position:relative;margin-left:auto;margin-right:12px;width:58px;height:32px;border-radius:999px;background:color-mix(in srgb,var(--hero-ink) 12%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--hero-ink) 18%,transparent);display:flex;align-items:center;justify-content:space-between;padding:0 8px;color:var(--muted);-webkit-tap-highlight-color:transparent}
+.tonosw svg{width:14px;height:14px;position:relative;z-index:1}
+.tonosw .knob{position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.25);transition:transform .25s var(--ease)}
+.tonosw[aria-checked="true"] .knob{transform:translateX(26px)}
+.tonosw[aria-checked="false"] .sun,.tonosw[aria-checked="true"] .moon{color:var(--on-accent)}
+.tono-anim body,.tono-anim .apphead,.tono-anim .panel,.tono-anim .ex,.tono-anim details,.tono-anim .hero{transition:background-color .3s,color .3s,border-color .3s}
 html[data-tono="grafite"]{--bg:#1C1B19;--surface:#262522;--raise:#312F2B;--tile:#312F2B;--sheet:#262522;--ink:#F3EEE5;--muted:#A39C90;--line:#36342F;--line2:#4A4740;
 --hero:#1C1B19;--hero-ink:#F3EEE5;--star-off:#4A4740;--glass:rgba(38,37,34,.84)}
 html[data-tono="grafite"] .apphead{background:#1C1B19;color:#F3EEE5}
