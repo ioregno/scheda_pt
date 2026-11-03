@@ -10,7 +10,7 @@
 //   macchine   la tua libreria: id (senza spazi), nome, marca, distretto, gruppi, esecuzione (passi), consiglio, foto ("foto/nome.jpg")
 //   esempio    scheda di esempio: la vedono i clienti in "Guarda un esempio" e tu come modello
 var CONFIG = {
- "versione": "1",
+ "versione": "2",
  "app": "Scheda",
  "coach": "Il tuo coach",
  "indirizzo": "",
@@ -1066,7 +1066,7 @@ var CONFIG = {
  ],
  "esempio": {
   "id": "esempio",
-  "cliente": "Giulio",
+  "cliente": "Marco",
   "obiettivo": 4,
   "varC": "Corpo libero",
   "data": "2026-11-03",

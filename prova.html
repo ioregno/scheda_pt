@@ -1,0 +1,58 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0A0A0A">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Prova l'app delle schede</title>
+<meta name="description" content="App delle schede per personal trainer: provala come cliente e come coach.">
+<link rel="stylesheet" href="tema.css">
+<style>
+/* presentazione per i personal trainer: colori e font da tema.css */
+.pw{max-width:520px;margin:0 auto;padding:34px 18px 60px;display:flex;flex-direction:column;gap:22px}
+.pw .hello{font-size:44px;line-height:1.02}
+.pw .lead{margin:0;color:var(--muted);font-size:16px;line-height:1.5}
+.pc{background:var(--surface);border:1px solid var(--line);border-radius:26px;padding:20px 18px;display:flex;flex-direction:column;gap:12px}
+.pc h2{font-size:28px}
+.pc p{margin:0;color:var(--muted);line-height:1.45}
+.pc a.primary{display:grid;place-items:center;text-decoration:none;color:var(--btn-ink)}
+.pl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.pl li{display:grid;grid-template-columns:22px 1fr;gap:10px;line-height:1.4}
+.pl li::before{content:"";width:8px;height:8px;margin:7px 0 0 6px;border-radius:50%;background:var(--accent)}
+.pl b{color:var(--ink)}
+.foot2{color:var(--muted);font-size:13px;text-align:center;margin:0}
+</style>
+</head><body>
+<main class="pw">
+  <div>
+    <div class="eyebrow">Per personal trainer · niente da installare</div>
+    <div class="hello" style="margin-top:14px">La scheda dei tuoi clienti, <span>sul loro telefono</span></div>
+  </div>
+  <p class="lead">Crei la scheda dal telefono, la mandi su WhatsApp e il cliente la usa in palestra anche senza internet. Qui puoi provare tutte e due le parti: non si salva niente e non serve registrarsi.</p>
+
+  <section class="pc">
+    <div class="eyebrow">1 · Il cliente</div>
+    <h2>Come la vede chi si allena</h2>
+    <p>Un anno di allenamenti finti già segnati. Scegli l'allenamento di oggi, tocca il nome di una macchina per vedere foto ed esecuzione, segna kg e ripetizioni e chiudi la sessione con le stelle.</p>
+    <a class="primary" href="index.html#prova">Prova l'app del cliente</a>
+  </section>
+
+  <section class="pc">
+    <div class="eyebrow">2 · Il coach</div>
+    <h2>Come la usi tu</h2>
+    <p>Due clienti di prova già pronti. Cambia gli esercizi, prova le varianti A, B e C, duplica una scheda e premi "Manda al cliente" per vedere il messaggio che arriverebbe su WhatsApp.</p>
+    <a class="primary" href="coach.html#prova">Prova la pagina Coach</a>
+  </section>
+
+  <section class="pc">
+    <div class="eyebrow">Cosa fa</div>
+    <ul class="pl">
+      <li><span><b>Una scheda per ogni cliente</b>, con le macchine della tua palestra, le foto e come si usano.</span></li>
+      <li><span><b>Varianti A, B e C</b> dello stesso allenamento su macchine diverse: l'app le alterna da sola.</span></li>
+      <li><span><b>Funziona senza internet</b>: in palestra il cliente apre l'icona e la scheda c'è.</span></li>
+      <li><span><b>Pesi, ripetizioni e stelle</b> per ogni allenamento, con le statistiche del mese, dei 6 mesi e dell'anno.</span></li>
+      <li><span><b>Il resoconto della settimana</b> arriva a te su WhatsApp con un tasto, già scritto.</span></li>
+      <li><span><b>Il tuo nome, il tuo logo, i tuoi colori.</b> Si paga una volta, nessun abbonamento.</span></li>
+    </ul>
+  </section>
+  <p class="foot2">I dati dei clienti restano sui loro telefoni.</p>
+</main>
+</body></html>

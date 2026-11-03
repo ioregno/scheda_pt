@@ -61,7 +61,9 @@ dialog .sheet label.f{color:var(--muted)}
 const C = window.CONFIG || {};
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const CKEY = 'coach-pt-v1';
+// #prova: pagina Coach di prova, con due clienti già pronti e schede salvate a parte (non tocca quelle vere)
+const PROVA = location.hash === '#prova';
+const CKEY = PROVA ? 'coach-pt-prova-v1' : 'coach-pt-v1';
 const M = {}; (C.macchine || []).forEach(m => M[m.id] = m);
 const GRUPPI = (C.gruppi || ['Petto','Spalle','Schiena','Tricipiti','Bicipiti','Quadricipiti','Femorali','Glutei','Polpacci','Addominali']);
 const VV = ['A','B','C'];
@@ -309,6 +311,14 @@ document.addEventListener('change', e => {
   }).catch(() => toast('File non valido'));
 });
 $('dlg').addEventListener('close', () => { $('sheet').onclick = $('sheet').onchange = null; });
+if (PROVA) {
+  if (!db.clienti.length && C.esempio) {
+    const a = newClient(C.esempio); a.cliente = 'Marco';
+    const b = newClient(C.esempio); b.cliente = 'Sara'; b.obiettivo = 3; b.giorni = b.giorni.slice(0, 3); b.giorni.forEach(g => g.C = []);
+    a.inviata = true; save();
+  }
+  document.body.insertAdjacentHTML('afterbegin', '<div class="demobar"><span><b>Prova</b>: crea, cambia e manda le schede che vuoi, restano solo su questo telefono.</span><a class="ghost" href="prova.html" style="text-decoration:none">Indietro</a></div>');
+}
 render();
 })();
 </script>

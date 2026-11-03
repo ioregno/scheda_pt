@@ -645,7 +645,14 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('click', e => { if (e.target.id === 'demoGo' || e.target.id === 'demoGo2' || e.target.id === 'demoGo3') setDemo(true); if (e.target.id === 'demoExit') setDemo(false); });
 setSync(); render();
-if (location.hash === '#esempio') setDemo(true);
+// prova per chi valuta l'app (link prova.html → index.html#prova): esempio senza salvare, Esci torna alla presentazione
+const PROVA = location.hash === '#prova';
+if (PROVA) {
+  $('demoBar').querySelector('span').innerHTML = '<b>Prova</b>: un anno di allenamenti finti. Scegli un allenamento, segna i pesi, chiudi la sessione: non si salva niente.';
+  $('demoExit').textContent = 'Indietro';
+  $('demoExit').addEventListener('click', e => { e.stopImmediatePropagation(); location.href = 'prova.html'; }, true);
+}
+if (location.hash === '#esempio' || PROVA) setDemo(true);
 else checkLink();
 
 // resoconto per il coach: ultimi 7 giorni, già scritto, da mandare su WhatsApp

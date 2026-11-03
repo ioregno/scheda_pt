@@ -75,11 +75,11 @@ for g in GIORNI:
         d[v] = lst
     giorni.append(d)
 
-esempio = {"id": "esempio", "cliente": "Giulio", "obiettivo": 4, "varC": "Corpo libero", "data": "2026-11-03",
+esempio = {"id": "esempio", "cliente": "Marco", "obiettivo": 4, "varC": "Corpo libero", "data": "2026-11-03",
            "giorni": giorni, "note": NOTE_FINALI}
 
 cfg = {
-    "versione": "1", "app": "Scheda", "coach": "Il tuo coach", "indirizzo": "", "palestra": "Green Theory", "colore": "#E6BE8A", "whatsapp": "",
+    "versione": "2", "app": "Scheda", "coach": "Il tuo coach", "indirizzo": "", "palestra": "Green Theory", "colore": "#E6BE8A", "whatsapp": "",
     "gruppi": GRUPPI, "macchine": macchine, "esempio": esempio,
 }
 txt = ("// CONFIGURAZIONE DELL'APP: l'unico file da cambiare (vedi GUIDA-PT.md).\n"
