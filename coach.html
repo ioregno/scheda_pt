@@ -36,7 +36,21 @@ label.f{display:flex;flex-direction:column;gap:5px;font:600 12px/1.2 var(--body)
 .small{font-size:13px;padding:9px 14px}
 .danger{color:#D0021B;border-color:#D0021B}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
-.catres{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow:auto}
+.catres{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.gtiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.gtiles button,.blist button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg);border-radius:16px;padding:16px 14px}
+.gtiles b,.blist b{font:700 16px/1.1 var(--body)}
+.gtiles small,.blist small{color:var(--muted);font:600 13px/1 var(--body)}
+.blist{display:flex;flex-direction:column;gap:6px}
+.blist em{font:600 11px/1 var(--body);font-style:normal;color:var(--accent);margin-left:auto}
+.chosen{display:grid;grid-template-columns:64px 1fr auto;gap:10px;align-items:center;background:var(--bg);border-radius:16px;padding:8px}
+.chosen img,.chosen .noimg{width:64px;height:64px;object-fit:contain;background:#fff;border-radius:12px}
+.chosen b{display:block;font:600 16px/1.2 var(--body)}.chosen small{color:var(--muted)}
+details.more{display:flex;flex-direction:column;gap:10px}
+#sheet>.back{align-self:flex-start}
+details.more>summary{cursor:pointer;font:600 14px/1.2 var(--body);color:var(--muted);padding:6px 0}
+details.more[open]>summary{margin-bottom:10px}
+details.more .f{margin-top:10px}
 .catres button{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:grid;grid-template-columns:56px 1fr;gap:10px;align-items:center;background:var(--bg);border-radius:14px;padding:6px 10px 6px 6px}
 .catres img,.catres .noimg{width:56px;height:56px;object-fit:contain;background:#fff;border-radius:10px}
 .catres b{display:block;font:600 15px/1.25 var(--body)}
@@ -129,7 +143,6 @@ function loadCat(){
     return CAT;
   }).catch(() => { catP = null; return null; });
 }
-const catState = {q: '', g: '', b: (() => { try { return localStorage.getItem('coach-pt-marca') || ''; } catch (e) { return ''; } })()};
 async function encode(c){
   const bytes = new TextEncoder().encode(JSON.stringify(clean(c)));
   if (window.CompressionStream) {
@@ -219,67 +232,78 @@ function renderEdit(){
 
 // ---------- foglio esercizio ----------
 let ed = null;   // {gi, v, i, e}
+// scelta della macchina a passi: muscolo -> marca -> macchine (o ricerca per nome)
+const pk = {step: 'g', g: '', b: '', q: ''};
+let myB = (() => { try { return localStorage.getItem('coach-pt-marca') || ''; } catch (e) { return ''; } })();
+const LIBNAME = 'La tua libreria';
+const PGR = GRUPPI.concat(['Adduttori', 'Total body']).filter((x, i, a) => a.indexOf(x) === i);
+function pool(){
+  const lib = Object.values(M).filter(m => LIB.has(m.id)).map(m => Object.assign({}, m, {lib: true}));
+  return lib.concat(CAT || []);
+}
+const brandOf = m => m.lib ? LIBNAME : m.marca;
 function openEx(gi, v, i){
   const c = get(cur), g = c.giorni[gi];
   const e = i === null ? {m: '', n: '', s: 3, r: '10', g: [], p: ''} : JSON.parse(JSON.stringify(g[v][i]));
-  ed = {gi, v, i, e}; drawEx(); $('dlg').showModal();
+  ed = {gi, v, i, e};
+  if (i === null) { pk.step = 'g'; pk.q = ''; drawPick(); } else drawEx();
+  $('dlg').showModal();
 }
-function machineOpts(sel){
-  const by = {};
-  Object.values(M).forEach(m => { if (!LIB.has(m.id)) return; const k = (m.gruppi && m.gruppi[0]) || 'Altro'; (by[k] = by[k] || []).push(m); });
-  const keys = GRUPPI.filter(k => by[k]).concat(Object.keys(by).filter(k => !GRUPPI.includes(k)));
-  const opt = m => '<option value="' + esc(m.id) + '"' + (m.id === sel ? ' selected' : '') + '>' + esc(m.nome) + (m.marca ? ' · ' + esc(m.marca) : '') + '</option>';
-  const used = Object.values(M).filter(m => !LIB.has(m.id)).sort((a, b) => (a.marca + a.nome).localeCompare(b.marca + b.nome));
-  return '<option value=""' + (sel ? '' : ' selected') + '>Esercizio libero (senza macchina)</option>' +
-    (used.length ? '<optgroup label="Dal catalogo dei produttori">' + used.map(opt).join('') + '</optgroup>' : '') +
-    keys.map(k => '<optgroup label="' + esc(k) + '">' + by[k].map(opt).join('') + '</optgroup>').join('');
+function drawPick(){
+  if (!CAT) loadCat().then(c => { if ($('dlg').open && ed && ed.picking && c) drawPick(); });
+  ed.picking = true;
+  const all = pool(), sh = $('sheet');
+  let h = '<div class="grab"></div>';
+  if (pk.step === 'g') {
+    h += '<h3>Che muscolo alleni?</h3>' +
+      '<label class="f"><input id="pkQ" type="search" value="' + esc(pk.q) + '" placeholder="Oppure cerca per nome: chest press, leg curl…" autocomplete="off"></label>' +
+      '<div id="pkBody">' + (pk.q ? pickSearch(all) : '<div class="gtiles">' + PGR.map(g => { const n = all.filter(m => (m.gruppi || [])[0] === g).length; return n ? '<button type="button" data-pg="' + esc(g) + '"><b>' + esc(g) + '</b><small>' + n + '</small></button>' : ''; }).join('') + '</div>' +
+        (CAT ? '' : '<p class="hint">Carico il catalogo dei produttori… (serve internet)</p>')) + '</div>' +
+      '<button type="button" class="ghost" data-x="free">Esercizio senza macchina</button>';
+  } else if (pk.step === 'b') {
+    const by = {}; all.filter(m => (m.gruppi || [])[0] === pk.g).forEach(m => { const b = brandOf(m); by[b] = (by[b] || 0) + 1; });
+    const names = Object.keys(by).sort((a, b) => (a === LIBNAME ? -2 : a === myB ? -1 : 0) - (b === LIBNAME ? -2 : b === myB ? -1 : 0) || a.localeCompare(b));
+    h += '<button type="button" class="back" data-pstep="g">‹ Muscoli</button><h3>' + esc(pk.g) + '</h3><p class="hint">Scegli la marca della macchina.</p>' +
+      '<div class="blist">' + names.map(b => '<button type="button" data-pb="' + esc(b) + '"><b>' + esc(b) + '</b>' + (b === myB ? '<em>ultima usata</em>' : '') + '<small>' + by[b] + '</small></button>').join('') + '</div>';
+  } else {
+    const list = all.filter(m => (m.gruppi || [])[0] === pk.g && brandOf(m) === pk.b);
+    const lines = {}; list.forEach(m => (lines[m.linea || ''] = lines[m.linea || ''] || []).push(m));
+    h += '<button type="button" class="back" data-pstep="b">‹ ' + esc(pk.g) + '</button><h3>' + esc(pk.b) + '</h3>' +
+      Object.keys(lines).sort((a, b) => lines[a].every(m => m.stato) - lines[b].every(m => m.stato) || a.localeCompare(b)).map(l => (l ? '<div class="eyebrow">' + esc(l) + '</div>' : '') + '<ul class="catres">' + lines[l].map(machRow).join('') + '</ul>').join('');
+  }
+  h += '<button type="button" class="ghost close" data-x="' + (ed.i === null && !ed.e.m && !ed.e.n ? 'no' : 'back') + '">' + (ed.i === null && !ed.e.m && !ed.e.n ? 'Annulla' : 'Indietro') + '</button>';
+  sh.innerHTML = h;
+}
+const machRow = m => '<li><button type="button" data-cat="' + esc(m.id) + '">' + (m.foto ? '<img src="' + esc(m.foto) + (m.lib ? '' : '?c') + '" alt="" loading="lazy">' : '<span class="noimg"></span>') +
+  '<span><b>' + esc(m.nome) + '</b><small>' + esc(m.lib ? (m.marca || '') : (m.linea || '')) + (m.stato ? ' · ' + esc(m.stato) : '') + '</small></span></button></li>';
+function pickSearch(all){
+  const w = pk.q.toLowerCase().split(/\s+/).filter(Boolean);
+  const res = all.filter(m => w.every(x => (m.nome + ' ' + (m.linea || '') + ' ' + (m.marca || '')).toLowerCase().includes(x)));
+  return res.length ? '<ul class="catres">' + res.slice(0, 60).map(m => machRow(Object.assign({}, m, {linea: [m.marca, m.linea].filter(Boolean).join(' · ')}))).join('') + '</ul>' + (res.length > 60 ? '<p class="hint">Altre ' + (res.length - 60) + ': scrivi di più per restringere.</p>' : '') : '<p class="hint">Nessuna macchina trovata.</p>';
 }
 function drawEx(){
+  ed.picking = false;
   const e = ed.e, m = e.m && M[e.m];
+  const more = !!(e.p || (e.c && e.c.length));
   $('sheet').innerHTML = '<div class="grab"></div><h3>' + (ed.i === null ? 'Nuovo esercizio' : 'Esercizio ' + (ed.i + 1)) + '</h3>' +
-    '<label class="f">Macchina<select id="exM">' + machineOpts(e.m) + '</select></label>' +
-    '<button type="button" class="ghost small" data-x="cat">Cerca tra tutte le macchine dei produttori</button>' +
-    (m ? '<div class="mph">' + (m.foto ? '<img src="' + esc(m.foto) + (LIB.has(m.id) ? '' : '?c') + '" alt="">' : '') + '<span class="hint">' + esc([m.marca, m.linea].filter(Boolean).join(' · ')) + (m.distretto ? '<br>' + esc(m.distretto) : '') + '</span></div>'
-       : '<label class="f">Nome dell\'esercizio<input id="exN" value="' + esc(e.n) + '" placeholder="Es. Panca piana con bilanciere"></label>') +
+    (m ? '<div class="chosen">' + (m.foto ? '<img src="' + esc(m.foto) + (LIB.has(m.id) ? '' : '?c') + '" alt="">' : '<span class="noimg"></span>') +
+          '<span><b>' + esc(m.nome) + '</b><small>' + esc([m.marca, m.linea].filter(Boolean).join(' · ')) + '</small></span><button type="button" class="ghost small" data-x="pick">Cambia</button></div>'
+       : '<label class="f">Nome dell\'esercizio<input id="exN" value="' + esc(e.n) + '" placeholder="Es. Panca piana con bilanciere"></label><button type="button" class="ghost small" data-x="pick">Scegli una macchina</button>') +
     '<div class="two"><label class="f">Serie<input id="exS" type="number" inputmode="numeric" min="1" max="12" value="' + esc(e.s) + '"></label>' +
     '<label class="f">Ripetizioni<input id="exR" value="' + esc(e.r) + '" placeholder="8-10"></label></div>' +
-    '<div class="f" style="display:flex;flex-direction:column;gap:6px;font:600 12px/1.2 var(--body);color:var(--muted)">Muscoli<div class="chips">' + GRUPPI.map(x => '<button type="button" data-chip="' + esc(x) + '" aria-pressed="' + (e.g || []).includes(x) + '">' + esc(x) + '</button>').join('') + '</div></div>' +
-    '<label class="f">Perché, o un consiglio (facoltativo)<textarea id="exP" placeholder="Es. tieni i gomiti stretti">' + esc(e.p) + '</textarea></label>' +
-    '<label class="f">Come eseguirlo, un passo per riga (facoltativo: se vuoto usa la spiegazione della macchina)<textarea id="exC">' + esc((e.c || []).join('\n')) + '</textarea></label>' +
+    '<details class="more"' + (more ? ' open' : '') + '><summary>Muscoli, consiglio e come si fa</summary>' +
+    '<div class="chips">' + GRUPPI.map(x => '<button type="button" data-chip="' + esc(x) + '" aria-pressed="' + (e.g || []).includes(x) + '">' + esc(x) + '</button>').join('') + '</div>' +
+    '<label class="f">Perché, o un consiglio<textarea id="exP" placeholder="Es. tieni i gomiti stretti">' + esc(e.p) + '</textarea></label>' +
+    '<label class="f">Come eseguirlo, un passo per riga<textarea id="exC" placeholder="Se lo lasci vuoto usa la spiegazione della macchina">' + esc((e.c || []).join('\n')) + '</textarea></label></details>' +
     '<button type="button" class="primary" data-x="ok">' + (ed.i === null ? 'Aggiungi' : 'Salva') + '</button>' +
     (ed.i === null ? '' : '<button type="button" class="ghost danger" data-x="del">Elimina esercizio</button>') +
     '<button type="button" class="ghost close" data-x="no">Annulla</button>';
 }
-function drawCat(){
-  if (!CAT) {
-    $('sheet').innerHTML = '<div class="grab"></div><h3>Catalogo dei produttori</h3><p class="hint">Carico il catalogo…</p><button type="button" class="ghost close" data-x="back">Indietro</button>';
-    loadCat().then(c => { if (!$('dlg').open || !ed) return; if (c) drawCat(); else $('sheet').innerHTML = '<div class="grab"></div><h3>Catalogo dei produttori</h3><p class="hint">Serve internet per cercare nel catalogo. Riprova quando sei connesso.</p><button type="button" class="ghost close" data-x="back">Indietro</button>'; });
-    return;
-  }
-  const marche = [...new Set(CAT.map(m => m.marca))].sort();
-  $('sheet').innerHTML = '<div class="grab"></div><h3>Catalogo dei produttori</h3>' +
-    '<p class="hint">' + CAT.length.toLocaleString('it-IT') + ' macchine da forza di ' + marche.length + ' marchi. Scegli la marca della tua palestra: me la ricordo.</p>' +
-    '<label class="f">Cerca<input id="catQ" type="search" value="' + esc(catState.q) + '" placeholder="Es. chest press, leg curl, Selection 900" autocomplete="off"></label>' +
-    '<div class="two"><label class="f">Marca<select id="catB"><option value="">Tutte</option>' + marche.map(b => '<option' + (b === catState.b ? ' selected' : '') + '>' + esc(b) + '</option>').join('') + '</select></label>' +
-    '<label class="f">Muscolo<select id="catG"><option value="">Tutti</option>' + GRUPPI.concat(['Adduttori', 'Total body']).filter((x, i, a) => a.indexOf(x) === i).map(g => '<option' + (g === catState.g ? ' selected' : '') + '>' + esc(g) + '</option>').join('') + '</select></label></div>' +
-    '<ul class="catres" id="catR"></ul>' +
-    '<button type="button" class="ghost close" data-x="back">Indietro</button>';
-  drawCatRes();
-}
-function drawCatRes(){
-  const w = catState.q.toLowerCase().split(/\s+/).filter(Boolean);
-  const res = CAT.filter(m => (!catState.b || m.marca === catState.b) && (!catState.g || (m.gruppi || []).includes(catState.g)) &&
-    w.every(x => (m.nome + ' ' + m.linea + ' ' + m.marca).toLowerCase().includes(x)));
-  const N = 80;
-  $('catR').innerHTML = (res.length ? res.slice(0, N).map(m => '<li><button type="button" data-cat="' + esc(m.id) + '">' +
-      (m.foto ? '<img src="' + esc(m.foto) + '?c" alt="" loading="lazy">' : '<span class="noimg"></span>') +
-      '<span><b>' + esc(m.nome) + '</b><small>' + esc([m.marca, m.linea].filter(Boolean).join(' · ')) + (m.stato ? ' · ' + esc(m.stato) : '') + '<br>' + esc((m.gruppi || []).join(', ')) + '</small></span></button></li>').join('') : '<li class="hint">Nessuna macchina trovata.</li>') +
-    (res.length > N ? '<li class="hint">Altre ' + (res.length - N) + ': scrivi qualcosa in Cerca per restringere.</li>' : '');
-}
 $('dlg').addEventListener('input', e => {
-  if (e.target.id === 'catQ') { catState.q = e.target.value; drawCatRes(); }
+  if (e.target.id === 'pkQ') { pk.q = e.target.value; const all = pool(); $('pkBody').innerHTML = pk.q ? pickSearch(all) : ''; if (!pk.q) drawPick(); }
 });
 function readEx(){
+  if (!$('exS')) return;
   const e = ed.e;
   e.s = Math.max(1, Math.min(12, Math.round(+$('exS').value) || 3)); e.r = $('exR').value.trim() || '10';
   if ($('exN')) e.n = $('exN').value.trim();
@@ -287,19 +311,25 @@ function readEx(){
   if (!e.c.length) delete e.c; if (!e.p) delete e.p;
   if (e.m) delete e.n; else delete e.m;
 }
-$('dlg').addEventListener('change', e => {
-  if (e.target.id === 'catB') { catState.b = e.target.value; try { localStorage.setItem('coach-pt-marca', catState.b); } catch (err) {} drawCatRes(); return; }
-  if (e.target.id === 'catG') { catState.g = e.target.value; drawCatRes(); return; }
-  if (e.target.id === 'exM') { readEx(); ed.e.m = e.target.value; const m = M[ed.e.m]; if (m && m.gruppi && m.gruppi.length) ed.e.g = m.gruppi.slice(); drawEx(); }
-});
 $('dlg').addEventListener('click', e => {
   if (e.target === $('dlg')) { $('dlg').close(); return; }
   const ch = e.target.closest('[data-chip]');
   if (ch) { const x = ch.dataset.chip, g = ed.e.g = ed.e.g || []; const i = g.indexOf(x); if (i < 0) g.push(x); else g.splice(i, 1); ch.setAttribute('aria-pressed', i < 0); return; }
+  const pg = e.target.closest('[data-pg]'); if (pg) { pk.g = pg.dataset.pg; pk.step = 'b'; drawPick(); $('sheet').scrollTop = 0; return; }
+  const pb = e.target.closest('[data-pb]'); if (pb) { pk.b = pb.dataset.pb; pk.step = 'm'; drawPick(); $('sheet').scrollTop = 0; return; }
+  const ps = e.target.closest('[data-pstep]'); if (ps) { pk.step = ps.dataset.pstep; drawPick(); return; }
   const pick = e.target.closest('[data-cat]');
-  if (pick) { const m = CAT.find(x => x.id === pick.dataset.cat); if (m) { M[m.id] = m; db.cat[m.id] = m; save(); ed.e.m = m.id; delete ed.e.n; if (m.gruppi && m.gruppi.length) ed.e.g = m.gruppi.filter(x => GRUPPI.includes(x)); } drawEx(); return; }
+  if (pick) {
+    const m = pool().find(x => x.id === pick.dataset.cat);
+    if (m) {
+      if (!m.lib) { M[m.id] = m; db.cat[m.id] = m; save(); myB = m.marca; try { localStorage.setItem('coach-pt-marca', myB); } catch (err) {} }
+      ed.e.m = m.id; delete ed.e.n; if (m.gruppi && m.gruppi.length) ed.e.g = m.gruppi.filter(x => GRUPPI.includes(x));
+    }
+    drawEx(); return;
+  }
   const b = e.target.closest('[data-x]'); if (!b) return;
-  if (b.dataset.x === 'cat') { readEx(); drawCat(); return; }
+  if (b.dataset.x === 'pick') { readEx(); pk.step = ed.e.m && M[ed.e.m] && (M[ed.e.m].gruppi || [])[0] ? 'b' : 'g'; pk.g = ed.e.m && M[ed.e.m] ? (M[ed.e.m].gruppi || [])[0] || '' : ''; pk.q = ''; drawPick(); return; }
+  if (b.dataset.x === 'free') { ed.e.m = ''; drawEx(); setTimeout(() => $('exN') && $('exN').focus(), 50); return; }
   if (b.dataset.x === 'back') { drawEx(); return; }
   const c = get(cur), g = c.giorni[ed.gi];
   if (b.dataset.x === 'ok') {
