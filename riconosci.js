@@ -26,18 +26,35 @@ export async function preparaFoto(src, max = 448){
   return cv;
 }
 const blobOf = (cv, q = .85) => new Promise(r => cv.toBlob(r, 'image/jpeg', q));
-// restituisce le somiglianze (-1..1) con tutte le foto dell'indice, nello stesso ordine di ids
-export async function somiglianze(cv){
+// impronta della foto: 384 numeri di lunghezza 1
+export async function impronta(cv){
   const m = await pronto(), img = await m.tf.RawImage.fromBlob(await blobOf(cv));
   const q = (await m.pipe(img)).data.slice(0, m.dim); let n = 0; for (const x of q) n += x * x; n = Math.sqrt(n) || 1;
-  const out = new Float32Array(m.ids.length);
-  for (let i = 0; i < out.length; i++) { let s = 0; const o = i * m.dim; for (let j = 0; j < m.dim; j++) s += q[j] * m.mat[o + j]; out[i] = s / n / m.scala; }
+  return Float32Array.from(q, x => x / n);
+}
+// somiglianza (-1..1) con tutte le foto del catalogo e poi con i "ricordi" (foto già riconosciute dal coach nella sua palestra)
+export async function confronta(q, ricordi = []){
+  const m = await pronto(), N = m.ids.length, sim = new Float32Array(N + ricordi.length);
+  for (let i = 0; i < N; i++) { let s = 0; const o = i * m.dim; for (let j = 0; j < m.dim; j++) s += q[j] * m.mat[o + j]; sim[i] = s / m.scala; }
+  ricordi.forEach((r, k) => { let s = 0; for (let j = 0; j < m.dim; j++) s += q[j] * r.v[j]; sim[N + k] = s; });
+  return {ids: m.ids.concat(ricordi.map(r => r.id)), sim, n: N};
+}
+// le k macchine più simili, una volta sola ciascuna; mem = trovata grazie a un ricordo
+export function migliori(res, k = 6){
+  const ord = Array.from(res.sim.keys()).sort((a, b) => res.sim[b] - res.sim[a]), out = [], visti = new Set();
+  for (const i of ord) { const id = res.ids[i]; if (visti.has(id)) continue; visti.add(id); out.push({id, sim: res.sim[i], mem: i >= res.n}); if (out.length >= k) break; }
   return out;
 }
-export async function migliori(sim, k = 6){
-  const m = await pronto(), r = [];
-  for (let i = 0; i < sim.length; i++) r.push([sim[i], i]);
-  return r.sort((a, b) => b[0] - a[0]).slice(0, k).map(([s, i]) => ({id: m.ids[i], sim: s}));
+// ricordo compatto (circa 520 caratteri) da salvare nei dati del coach, e ritorno
+export function codifica(q){
+  const s = 127 / Math.max(...Array.from(q, Math.abs)), b = new Int8Array(q.length);
+  q.forEach((x, i) => b[i] = Math.round(x * s));
+  let t = ''; new Uint8Array(b.buffer).forEach(c => t += String.fromCharCode(c));
+  return {s: +s.toFixed(3), b: btoa(t)};
+}
+export function decodifica(r){
+  const t = atob(r.b), b = new Int8Array(t.length); for (let i = 0; i < t.length; i++) b[i] = (t.charCodeAt(i) << 24) >> 24;
+  return Float32Array.from(b, x => x / r.s);
 }
 // secondo parere di Claude: legge anche loghi e scritte. Costa pochi centesimi a foto. La chiave resta sul telefono del coach.
 export async function chiediAClaude(cv, candidati, chiave, modello = 'claude-sonnet-5-5'){
@@ -47,8 +64,8 @@ export async function chiediAClaude(cv, candidati, chiave, modello = 'claude-son
     headers: {'content-type': 'application/json', 'x-api-key': chiave, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true'},
     body: JSON.stringify({model: modello, max_tokens: 300, messages: [{role: 'user', content: [
       {type: 'image', source: {type: 'base64', media_type: 'image/jpeg', data: b64}},
-      {type: 'text', text: 'Questa è la foto di un macchinario da palestra. Candidati proposti da un confronto automatico (possono essere sbagliati):\n' + elenco +
-        '\n\nGuarda forma, regolazioni e soprattutto logo o scritte visibili. Rispondi SOLO con un JSON: {"id":"<id del candidato giusto, oppure null se nessuno lo è>","marca":"<marca letta o dedotta, oppure null>","tipo":"<che macchina è, in italiano, es. lat machine>","motivo":"<una frase in italiano>"}'}]}]})});
+      {type: 'text', text: 'Questa è la foto di un macchinario da palestra. Candidati proposti da un confronto automatico (spesso sbagliati):\n' + elenco +
+        '\n\nSe nella foto si leggono il logo, la marca o il nome della macchina (targhette, adesivi), usali: contano più della forma. Rispondi SOLO con un JSON: {"id":"<id del candidato giusto, oppure null se nessuno lo è>","marca":"<marca letta o dedotta, oppure null>","nome":"<nome del modello come scritto sulla macchina, in inglese se è in inglese, oppure null>","tipo":"<che macchina è, in italiano, es. lat machine>","motivo":"<una frase in italiano>"}'}]}]})});
   if (!r.ok) throw new Error('Claude ha risposto ' + r.status + (r.status === 401 ? ' (chiave non valida)' : ''));
   const t = (await r.json()).content.map(b => b.text || '').join('');
   const j = t.match(/\{[\s\S]*\}/); if (!j) throw new Error('Risposta non leggibile');

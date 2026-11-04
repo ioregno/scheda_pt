@@ -272,22 +272,33 @@ function openEx(gi, v, i){
   $('dlg').showModal();
 }
 // ---------- riconoscere la macchina da una foto (riconosci.js: modello sul telefono + confronto con le foto del catalogo) ----------
-const rec = {live: 0, stream: null, cv: null, top: []};
+// Ricordi: quando il coach sceglie la macchina giusta dopo una foto, l'impronta di quella foto resta salvata (db.ricordi, va anche nel backup).
+// La volta dopo, una foto simile della stessa macchina della sua palestra viene riconosciuta subito.
+db.ricordi = db.ricordi || {};
+const rec = {live: 0, stream: null, cv: null, q: null, top: []};
 const recKey = () => { try { return localStorage.getItem('coach-pt-claude') || ''; } catch (e) { return ''; } };
 let recMod = null; const RC = () => recMod = recMod || import('./riconosci.js');
 function recStop(){ rec.live++; if (rec.stream) { rec.stream.getTracks().forEach(t => t.stop()); rec.stream = null; } }
 $('dlg').addEventListener('close', recStop);
 const recSt = t => { const o = $('recOut'); if (o) o.innerHTML = '<p class="recst">' + esc(t) + '</p>'; };
 const recEtichetta = m => [m.marca, m.nome, m.linea].filter(Boolean).join(' · ');
+const recMem = R => Object.keys(db.ricordi).flatMap(id => db.ricordi[id].map(x => ({id, v: R.decodifica(x)})));
+function recRicorda(id){
+  if (!rec.q || !recMod) return;
+  recMod.then(R => { const a = db.ricordi[id] = db.ricordi[id] || []; a.unshift(R.codifica(rec.q)); a.length = Math.min(a.length, 4); save(); });
+}
+const recRow = (m, nota) => machRow(Object.assign({}, m, {linea: [m.marca, m.linea].filter(Boolean).join(' · ') + (nota ? ' · ' + nota : ''), marca: m.lib ? [m.marca, nota].filter(Boolean).join(' · ') : m.marca}));
 function recShow(top){
-  const all = pool(), by = {}; all.forEach(m => by[m.id] = m);
+  const by = {}; pool().forEach(m => by[m.id] = m);
   const rows = top.map(t => ({t, m: by[t.id]})).filter(x => x.m);
   const g = rows.length ? rows[0].t.sim : 0;
-  // soglie misurate su foto di prova: sotto 0,5 non è una macchina; tra 0,7 e 0,85 la macchina giusta e una sbagliata si somigliano
-  const verdetto = g >= .85 ? 'Molto probabile' : g >= .7 ? 'Possibile: controlla la foto' : g >= .5 ? 'Poco sicuro: prova un’altra inquadratura' : 'Non vedo una macchina del catalogo';
-  $('recOut').innerHTML = '<div class="eyebrow">' + verdetto + '</div><ul class="catres">' + rows.slice(0, 5).map(x => machRow(Object.assign({}, x.m, {linea: [x.m.marca, x.m.linea].filter(Boolean).join(' · ')}))).join('') + '</ul>' +
-    (rec.cv && !rec.stream ? '<button type="button" class="ghost small" data-r="claude">Chiedi a Claude</button>' : '') + '<div id="recAI"></div>';
+  // soglie: con foto vere di palestra la macchina giusta del catalogo raramente supera 0,75; un ricordo della stessa macchina sì
+  const verdetto = g >= .85 ? 'Molto probabile' : g >= .7 ? 'Possibile: controlla' : 'Poco sicuro: sono macchine dalla forma simile';
+  $('recOut').innerHTML = '<div class="eyebrow">' + verdetto + '</div><ul class="catres">' + rows.slice(0, 5).map(x => recRow(x.m, x.t.mem ? 'già vista qui' : '')).join('') + '</ul>' +
+    (rec.cv && !rec.stream ? '<button type="button" class="ghost small" data-r="claude">Chiedi a Claude</button>' : '') + '<div id="recAI"></div>' +
+    '<p class="hint">Tocca quella giusta: l\'app se la ricorda e la prossima foto della stessa macchina la riconosce meglio. Se non c\'è, torna ai muscoli o cercala per nome.</p>';
 }
+async function recCalcola(R, cv){ rec.q = await R.impronta(cv); return R.confronta(rec.q, recMem(R)); }
 async function recFoto(file){
   recStop(); const id = rec.live;
   try {
@@ -295,7 +306,7 @@ async function recFoto(file){
     const v = $('recV'); if (!v) return; v.replaceChildren(rec.cv);
     await loadCat(); recSt('Preparo il riconoscimento… la prima volta scarico 24 MB (serve internet).');
     await R.pronto(); if (rec.live !== id) return;
-    rec.sim = await R.somiglianze(rec.cv); rec.top = await R.migliori(rec.sim, 12); recShow(rec.top);
+    rec.top = R.migliori(await recCalcola(R, rec.cv), 12); if (rec.live === id) recShow(rec.top);
   } catch (e) { recSt('Non ci sono riuscito: ' + (e.message || e) + '. Serve internet la prima volta.'); }
 }
 async function recLive(){
@@ -310,14 +321,22 @@ async function recLive(){
     const R = await RC(); await loadCat(); await R.pronto();
     let ema = null, last = '';
     while (rec.live === id) {
-      const cv = await R.preparaFoto(v, 336), sim = await R.somiglianze(cv);
+      const cv = await R.preparaFoto(v, 336), res = await recCalcola(R, cv);
       if (rec.live !== id) return;
-      ema = ema ? ema.map((x, i) => .5 * x + .5 * sim[i]) : sim; rec.cv = cv; rec.sim = ema;
-      const top = await R.migliori(ema, 12), k = top.slice(0, 5).map(t => t.id).join();
+      // media degli ultimi fotogrammi: la lista non salta a ogni movimento
+      ema = ema && ema.length === res.sim.length ? ema.map((x, i) => .5 * x + .5 * res.sim[i]) : res.sim; rec.cv = cv;
+      const top = R.migliori({ids: res.ids, sim: ema, n: res.n}, 12), k = top.slice(0, 5).map(t => t.id).join();
       rec.top = top; if (k !== last) { last = k; recShow(top); }
       await new Promise(r => setTimeout(r, 120));
     }
   } catch (e) { if (rec.live === id) recSt('Non ci sono riuscito: ' + (e.message || e)); }
+}
+// cerca nel catalogo il nome letto da Claude (es. "Panatta" + "Power Row")
+function recCercaNome(r){
+  const low = x => String(x || '').toLowerCase(), w = low(r.nome).split(/[^a-z0-9àèéìòù]+/).filter(x => x.length > 1), marca = low(r.marca).split(/\s+/)[0];
+  if (!w.length) return [];
+  return pool().map(m => { const n = low(m.nome), hit = w.filter(x => n.includes(x)).length; return {m, p: hit / w.length + (marca && low(m.marca).includes(marca) ? .5 : 0) - Math.abs(n.split(/\s+/).length - w.length) * .02}; })
+    .filter(x => x.p >= .99).sort((a, b) => b.p - a.p).slice(0, 3).map(x => x.m);
 }
 $('dlg').addEventListener('change', e => { if (e.target.id === 'recF' && e.target.files[0]) recFoto(e.target.files[0]); });
 $('dlg').addEventListener('input', e => { if (e.target.id === 'recK') { try { localStorage.setItem('coach-pt-claude', e.target.value.trim()); } catch (x) {} } });
@@ -333,9 +352,12 @@ $('dlg').addEventListener('click', async e => {
     try {
       const by = {}; pool().forEach(m => by[m.id] = m);
       const cand = rec.top.filter(t => by[t.id]).slice(0, 12).map(t => ({id: t.id, etichetta: recEtichetta(by[t.id])}));
-      const r = await (await RC()).chiediAClaude(rec.cv, cand, k), m = r.id && by[r.id];
-      out.innerHTML = '<div class="recsay"><b>Claude: ' + esc(m ? recEtichetta(m) : 'nessuno dei candidati') + '</b><br>' + esc(r.motivo || '') + (m ? '' : '<br>Secondo Claude è: ' + esc([r.marca, r.tipo].filter(Boolean).join(' · ') + '. Cercalo per nome qui sopra.')) + '</div>' +
-        (m ? '<ul class="catres">' + machRow(Object.assign({}, m, {linea: [m.marca, m.linea].filter(Boolean).join(' · ')})) + '</ul>' : '');
+      const r = await (await RC()).chiediAClaude(rec.cv, cand, k);
+      const trovate = (r.id && by[r.id] ? [by[r.id]] : []).concat(recCercaNome(r)).filter((m, i, a) => a.findIndex(x => x.id === m.id) === i).slice(0, 3);
+      const letto = [r.marca, r.nome].filter(Boolean).join(' ') || r.tipo || 'non lo so';
+      out.innerHTML = '<div class="recsay"><b>Claude: ' + esc(letto) + '</b>' + (r.tipo && r.nome ? ' (' + esc(r.tipo) + ')' : '') + '<br>' + esc(r.motivo || '') +
+        (trovate.length ? '' : '<br>Non l\'ho trovata nel catalogo: cercala per nome o scegli "Esercizio senza macchina".') + '</div>' +
+        (trovate.length ? '<ul class="catres">' + trovate.map(m => recRow(m, '')).join('') + '</ul>' : '');
     } catch (err) { out.innerHTML = '<p class="recst">Non ho potuto chiedere a Claude: ' + esc(err.message || err) + '</p>'; }
   }
 });
@@ -425,6 +447,7 @@ $('dlg').addEventListener('click', e => {
     const m = pool().find(x => x.id === pick.dataset.cat);
     if (m) {
       if (!m.lib) { M[m.id] = m; db.cat[m.id] = m; save(); myB = m.marca; try { localStorage.setItem('coach-pt-marca', myB); } catch (err) {} }
+      if (pk.step === 'r' && ed.picking) recRicorda(m.id);
       ed.e.m = m.id; delete ed.e.n; if (m.gruppi && m.gruppi.length) ed.e.g = m.gruppi.filter(x => GRUPPI.includes(x));
     }
     drawEx(); return;
@@ -519,7 +542,7 @@ function openNew(){
   $('dlg').showModal();
 }
 function backupDown(){
-  const blob = new Blob([JSON.stringify({tipo: 'coach-pt', data: iso(new Date()), clienti: db.clienti, cat: db.cat}, null, 1)], {type: 'application/json'});
+  const blob = new Blob([JSON.stringify({tipo: 'coach-pt', data: iso(new Date()), clienti: db.clienti, cat: db.cat, ricordi: db.ricordi}, null, 1)], {type: 'application/json'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'schede-clienti-' + iso(new Date()) + '.json'; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
@@ -528,6 +551,7 @@ document.addEventListener('change', e => {
   e.target.files[0].text().then(txt => {
     const j = JSON.parse(txt); if (!j || !Array.isArray(j.clienti)) throw 0;
     const have = new Set(db.clienti.map(c => c.id)); let n = 0, u = 0;
+    if (j.ricordi && typeof j.ricordi === 'object') Object.keys(j.ricordi).forEach(id => { if (!db.ricordi[id] && Array.isArray(j.ricordi[id])) db.ricordi[id] = j.ricordi[id]; });
     if (j.cat && typeof j.cat === 'object') Object.keys(j.cat).forEach(id => { if (!db.cat[id]) db.cat[id] = j.cat[id]; if (!M[id]) M[id] = j.cat[id]; });
     j.clienti.forEach(c => { if (!c || !c.id || !Array.isArray(c.giorni)) return; if (have.has(c.id)) { const i = db.clienti.findIndex(x => x.id === c.id); if ((c.data || '') > (db.clienti[i].data || '')) { db.clienti[i] = c; u++; } } else { db.clienti.push(c); n++; } });
     save(); render(); toast('Backup caricato: ' + n + ' nuovi, ' + u + ' aggiornati');
