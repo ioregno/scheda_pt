@@ -63,6 +63,11 @@
     <ul class="hist" id="hist"></ul>
   </section>
 
+  <details id="fotoSec" class="fdet">
+    <summary>Foto progressi<small id="fotoN"></small></summary>
+    <div id="fotoBody"></div>
+  </details>
+
   <details>
     <summary>Backup e note</summary>
     <p class="sync" id="yinfo"></p>
@@ -70,6 +75,7 @@
     <p class="sync" id="schInfo"></p>
     <ul id="notes"></ul>
     <p>Il backup copia tutto lo storico come testo. Incollalo qui sotto su un altro dispositivo e premi Importa per unirlo.</p>
+    <p>Le foto progressi restano solo su questo telefono e non entrano nel backup: per tenerle al sicuro aprine una e premi <b>Salva in Foto</b>.</p>
     <div class="row"><button class="ghost" type="button" id="bkCopy">Copia backup</button></div>
     <textarea id="bkIn" aria-label="Incolla backup" placeholder="Incolla qui il backup"></textarea>
     <div class="row"><button class="ghost" type="button" id="bkImp">Importa</button></div>
@@ -81,6 +87,7 @@
 
 <dialog id="dlgM"><div class="sheet" id="sheetM"></div></dialog>
 <dialog id="dlgD"><div class="sheet" id="sheetD"></div></dialog>
+<dialog id="dlgF"><div class="sheet" id="sheetF"></div></dialog>
 <dialog id="dlgC" class="full"><div class="close-pg" id="pageC"></div></dialog>
 <div class="peek" id="peek" hidden></div>
 <div class="toast" id="toast" hidden></div>
@@ -242,10 +249,13 @@ function openClose(existingId){
     '<div class="opt"><label class="hd"><input type="checkbox" id="cAbs"' + (a ? ' checked' : '') + '> Addominali</label>' +
       '<div class="bd" id="cAbsBd"' + (a ? '' : ' hidden') + '><label class="u">Quantità<input type="number" id="cAbsN" inputmode="numeric" min="1" max="2000" value="' + (a ? a.n : 50) + '"></label>' +
       '<label class="u">Unità<select id="cAbsU">' + Object.keys(ABSU).map(k => '<option value="' + k + '"' + (a && a.u === k ? ' selected' : '') + '>' + ABSU[k] + '</option>').join('') + '</select></label></div></div>' +
+    (demo ? '' : '<div class="opt"><span class="hd">Foto progressi</span><div class="pfoto" id="cFoto"></div></div>') +
     '<div style="margin-top:auto;display:flex;flex-direction:column;gap:8px"><div class="done-msg" id="cMsg" hidden></div>' +
       '<button type="button" class="primary" id="cGo" data-id="' + (ex ? ex.id : '') + '">' + (ex ? 'Salva modifiche' : 'Chiudi la sessione') + '</button>' +
       '<button type="button" class="ghost" id="cBack">' + (ex ? 'Chiudi' : 'Torna alla scheda') + '</button></div>';
   drawCloseStars();
+  closeFotoReset();
+  if (!demo) { drawCloseFoto(); if (ex && FOTO[ex.id]) fotoGet(ex.id).then(f => { if (f && !cf.changed) { cf.blob = f.img; cf.url = URL.createObjectURL(f.img); drawCloseFoto(); } }).catch(() => {}); }
   if (!$('dlgC').open) $('dlgC').showModal();
 }
 function drawCloseStars(){ $('cStars').innerHTML = [1,2,3].map(k => '<button type="button" class="st' + (closeQ >= k ? ' on' : '') + '" data-cq="' + k + '" aria-label="' + k + (k === 1 ? ' stella' : ' stelle') + '">★</button>').join(''); }
@@ -269,6 +279,7 @@ function moveSession(id, nd){
 }
 function removeSession(id){
   state.sessions = state.sessions.filter(s => s.id !== id);
+  if (!demo && FOTO[id]) fotoDel(id).then(fotoIndex, fotoIndex);
   if (col && !demo) { state.deleted.push(id); col.doc(id).delete().catch(() => {}); }
   save(); render();
 }
@@ -304,7 +315,7 @@ function setDemo(on){
   if (on === demo) return;
   if (on) { realSch = SCH; if (!SCH) useScheda(C.esempio); realState = state; const ds = demoSessions(); state = {sessions: ds, deleted: [], kg: demoKg(ds)}; demo = true; }
   else { state = realState || state; realState = null; demo = false; if (!realSch) useScheda(null); }
-  $('demoBar').hidden = !demo; ui.day = null; setSync(); render(); scrollTo(0, 0);
+  $('demoBar').hidden = !demo; ui.day = null; setSync(); render(); if (typeof renderFotoBtn === 'function') renderFotoBtn(); scrollTo(0, 0);
 }
 
 // consiglio del giorno
@@ -573,22 +584,30 @@ $('week').addEventListener('click', e => { const b = e.target.closest('.day'); i
 $('logBtn').addEventListener('click', () => { ui.pickDate = iso(today()); saveUi(); openClose(); });
 $('dlgC').addEventListener('click', e => {
   const st = e.target.closest('[data-cq]'); if (st) { closeQ = closeQ === +st.dataset.cq ? 0 : +st.dataset.cq; drawCloseStars(); return; }
+  if (e.target.closest('[data-cf="del"]')) { if (cf.url) URL.revokeObjectURL(cf.url); cf.blob = null; cf.url = ''; cf.changed = true; drawCloseFoto(); return; }
   if (e.target.id === 'cBack') { $('dlgC').close(); return; }
   if (e.target.id === 'cGo') {
     const x = readClose();
-    if (e.target.dataset.id) { updateSession(e.target.dataset.id, x); $('dlgC').close(); toast('Sessione aggiornata'); return; }
+    if (e.target.dataset.id) { updateSession(e.target.dataset.id, x); saveCloseFoto(e.target.dataset.id); $('dlgC').close(); toast('Sessione aggiornata'); return; }
     if (e.target.dataset.saved) { $('dlgC').close(); return; }
     const ck0 = iso(today()) + ui.day + ui.variant; if (ui.checks[ck0]) { delete ui.checks[ck0]; saveUi(); }   // sessione salvata: le spunte ripartono da zero
-    const sn = addSession(iso(today()), ui.day, ui.variant, x);
+    const sn = addSession(iso(today()), ui.day, ui.variant, x); saveCloseFoto(sn.id);
     e.target.dataset.saved = sn.id;
     ui.chosen = ''; saveUi(); render();   // sessione chiusa: si riparte da "Scegli l'allenamento"
     const stp = $('stamp'); stp.hidden = false; stp.classList.add('go');
     $('cMsg').hidden = false; $('cMsg').textContent = 'Bravo, sessione chiusa. Ci vediamo alla prossima.';
     e.target.textContent = 'Torna alla scheda'; $('cBack').hidden = true;
-    $('pageC').querySelectorAll('input,select,[data-cq]').forEach(el => el.disabled = true);
+    $('pageC').querySelectorAll('input,select,[data-cq],[data-cf]').forEach(el => el.disabled = true);
   }
 });
-$('dlgC').addEventListener('change', e => { if (e.target.id === 'cCardio') $('cCardioBd').hidden = !e.target.checked; if (e.target.id === 'cAbs') $('cAbsBd').hidden = !e.target.checked; });
+$('dlgC').addEventListener('change', e => {
+  if (e.target.id === 'cFotoIn' && e.target.files && e.target.files[0]) {
+    const f = e.target.files[0]; $('cFoto').querySelector('small').textContent = 'Preparo la foto…';
+    shrink(f).then(b => { if (cf.url) URL.revokeObjectURL(cf.url); cf.blob = b; cf.url = URL.createObjectURL(b); cf.changed = true; drawCloseFoto(); })
+      .catch(() => { toast('Non riesco a leggere questa foto, provane un\'altra'); drawCloseFoto(); });
+    return;
+  }
+  if (e.target.id === 'cCardio') $('cCardioBd').hidden = !e.target.checked; if (e.target.id === 'cAbs') $('cAbsBd').hidden = !e.target.checked; });
 document.addEventListener('change', e => { const m = e.target.closest('input[data-moveto]'); if (m && moveSession(m.dataset.moveto, m.value)) { if ($('dlgD').open) $('dlgD').close(); toast('Spostato al ' + fmt(m.value)); } });
 document.addEventListener('click', e => { const r = e.target.closest('[data-recap]'); if (r) { if ($('dlgD').open) $('dlgD').close(); openClose(r.dataset.recap); } });
 $('hist').addEventListener('click', e => { const li = e.target.closest('li[data-open]'); if (li && !e.target.closest('.del')) { openDay(li.dataset.open); return; } const b = e.target.closest('.del'); if (!b) return; if (armed === b.dataset.id) { armed = null; removeSession(b.dataset.id); toast('Eliminato'); } else { armed = b.dataset.id; renderHist(); } });
@@ -604,7 +623,7 @@ document.addEventListener('click', e => {
   if (e.target.id === 'addGo') { const ad = $('addDay').value, av = vsOf(ad).includes($('addVar').value) ? $('addVar').value : vsOf(ad)[0]; addSession(e.target.dataset.date, ad, av); $('dlgD').close(); toast('Aggiunto il ' + fmt(e.target.dataset.date)); return; }
   const dd = e.target.closest('.del[data-in="day"]'); if (dd) { if (dd.classList.contains('armed')) { removeSession(dd.dataset.id); $('dlgD').close(); toast('Eliminato'); } else { dd.classList.add('armed'); dd.textContent = 'Conferma'; } }
 });
-['dlgM','dlgD'].forEach(id => $(id).addEventListener('click', e => { if (e.target === $(id)) $(id).close(); }));
+['dlgM','dlgD','dlgF'].forEach(id => $(id).addEventListener('click', e => { if (e.target === $(id)) $(id).close(); }));
 // anteprima foto passando sopra (mouse)
 const peek = $('peek');
 function hidePeek(){ peek.hidden = true; }
@@ -612,6 +631,97 @@ if (window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matche
   $('exs').addEventListener('mouseover', e => { const n = e.target.closest('.ex-name[data-slug]'); if (!n) return; const m = M[n.dataset.slug]; if (!m || !m.img) return; peek.innerHTML = '<img alt="" src="' + m.img + '">'; peek.hidden = false; const r = n.getBoundingClientRect(); peek.style.left = Math.min(r.left, innerWidth - 236) + 'px'; peek.style.top = (r.bottom + 8 + 230 > innerHeight ? r.top - 175 : r.bottom + 8) + 'px'; });
   $('exs').addEventListener('mouseout', e => { if (e.target.closest('.ex-name')) hidePeek(); });
 }
+// foto progressi: compresse e salvate solo su questo telefono (IndexedDB), separate dallo storico e dal backup testo
+var fdbP = null, FOTO = {}, cf = {blob: null, url: '', changed: false}, fView = null, fUrls = [];
+function fdb(){ return fdbP || (fdbP = new Promise((ok, ko) => { try { const q = indexedDB.open('scheda-pt-foto', 1); q.onupgradeneeded = () => q.result.createObjectStore('foto', {keyPath: 'id'}); q.onsuccess = () => ok(q.result); q.onerror = () => ko(q.error); } catch (e) { ko(e); } })); }
+function fdo(mode, fn){ return fdb().then(db => new Promise((ok, ko) => { const tx = db.transaction('foto', mode), q = fn(tx.objectStore('foto')); tx.oncomplete = () => ok(q && q.result); tx.onerror = () => ko(tx.error); tx.onabort = () => ko(tx.error); })); }
+const fotoGet = id => fdo('readonly', s => s.get(id)), fotoAll = () => fdo('readonly', s => s.getAll());
+const fotoPut = f => fdo('readwrite', s => s.put(f)), fotoDel = id => fdo('readwrite', s => s.delete(id));
+var FL = [], FLU = [];
+function fotoIndex(){ return fotoAll().then(l => { FOTO = {}; FL = (l || []).slice(); FL.forEach(f => FOTO[f.id] = f.date); renderFotoBtn(); }).catch(() => renderFotoBtn()); }
+function renderFotoBtn(){
+  const el = $('fotoBody'); if (!el) return;
+  (FLU || []).forEach(u => URL.revokeObjectURL(u)); FLU = [];
+  $('fotoSec').hidden = !!demo;
+  const l = demo || !FL ? [] : FL.map(f => Object.assign({}, f, {d: fDate(f)})).sort((a, b) => a.d < b.d ? 1 : a.d > b.d ? -1 : b.at - a.at);
+  $('fotoN').textContent = l.length ? l.length + (l.length === 1 ? ' foto' : ' foto') : '';
+  if (!l.length) { el.innerHTML = '<div class="empty">Quando premi <b>Termina</b> puoi aggiungere una foto. Qui le rivedi e confronti la prima con l\'ultima.</div>'; return; }
+  el.innerHTML = '<div class="fprev">' + l.slice(0, 3).map(f => { const u = URL.createObjectURL(f.img); FLU.push(u); return '<button type="button" data-fopen="' + f.id + '"><img src="' + u + '" alt="Foto del ' + fmt(f.d) + '"><span>' + fmt(f.d) + '</span></button>'; }).join('') + '</div>' +
+    '<button type="button" class="ghost fotobtn" id="fotoGo">' + (l.length > 1 ? 'Vedi tutte e confronta · ' + l.length : 'Apri la foto') + '</button>';
+}
+function shrink(file){
+  return new Promise((ok, ko) => {
+    const u = URL.createObjectURL(file), im = new Image();
+    im.onload = () => {
+      const k = Math.min(1, 1440 / Math.max(im.naturalWidth, im.naturalHeight)), c = document.createElement('canvas');
+      c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(u);
+      c.toBlob(b => b ? ok(b) : ko(new Error('foto')), 'image/jpeg', 0.82);
+    };
+    im.onerror = () => { URL.revokeObjectURL(u); ko(new Error('foto')); };
+    im.src = u;
+  });
+}
+function closeFotoReset(){ if (cf.url) URL.revokeObjectURL(cf.url); cf = {blob: null, url: '', changed: false}; }
+function drawCloseFoto(){
+  const el = $('cFoto'); if (!el) return;
+  const pick = t => '<label class="ghost pfile">' + t + '<input type="file" accept="image/*" id="cFotoIn"></label>';
+  el.innerHTML = cf.url
+    ? '<img src="' + cf.url + '" alt="Foto progressi"><div class="row2">' + pick('Cambia') + '<button type="button" class="ghost" data-cf="del">Togli</button></div><small>Resta solo su questo telefono.</small>'
+    : '<div class="row2">' + pick('Aggiungi una foto') + '</div><small>Scattala ora o prendila dalla galleria. Resta solo su questo telefono.</small>';
+}
+function saveCloseFoto(id){
+  if (demo || !cf.changed) return;
+  const s = state.sessions.find(x => x.id === id) || {};
+  const p = cf.blob ? fotoPut({id, date: s.date || iso(today()), day: s.day, variant: s.variant, img: cf.blob, at: Date.now()}) : fotoDel(id);
+  cf.changed = false;
+  p.then(fotoIndex).catch(() => toast('Foto non salvata: memoria del telefono piena?'));
+  if (cf.blob && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+}
+const fDate = f => { const s = state.sessions.find(x => x.id === f.id); return s ? s.date : f.date; };
+function fUrl(b){ const u = URL.createObjectURL(b); fUrls.push(u); return u; }
+function fClean(){ fUrls.forEach(u => URL.revokeObjectURL(u)); fUrls = []; }
+function gap(a, b){ const d = Math.round((parse(b) - parse(a)) / 864e5); return d < 1 ? 'stesso giorno' : d < 60 ? d + (d === 1 ? ' giorno' : ' giorni') + ' dopo' : Math.round(d / 30.4) + ' mesi dopo'; }
+function openFoto(){
+  fotoAll().then(l => {
+    fClean(); fView = null;
+    l = (l || []).map(f => Object.assign(f, {d: fDate(f)})).sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : a.at - b.at);
+    let h = '<div class="grab"></div><div class="eyebrow">' + l.length + (l.length === 1 ? ' foto' : ' foto') + '</div><h3>Foto progressi</h3>';
+    if (!l.length) h += '<p class="fnote">Ancora nessuna foto. Aggiungila quando premi Termina.</p>';
+    if (l.length > 1) { const a = l[0], z = l[l.length - 1];
+      h += '<div class="pvs"><figure><img src="' + fUrl(a.img) + '" alt=""><figcaption>Prima · ' + fmt(a.d) + '</figcaption></figure><figure><img src="' + fUrl(z.img) + '" alt=""><figcaption>Adesso · ' + gap(a.d, z.d) + '</figcaption></figure></div>'; }
+    if (l.length) h += '<div class="pgrid">' + l.slice().reverse().map(f => '<button type="button" data-fopen="' + f.id + '"><img src="' + fUrl(f.img) + '" alt="Foto del ' + fmt(f.d) + '"><span>' + fmt(f.d) + '</span></button>').join('') + '</div>';
+    h += '<p class="fnote">Le foto restano solo su questo telefono e non entrano nel backup. Se togli l\'app dalla schermata Home potresti perderle: salva quelle importanti in Foto.</p><button type="button" class="ghost" data-close="dlgF">Chiudi</button>';
+    $('sheetF').innerHTML = h; $('sheetF').scrollTop = 0;
+    if (!$('dlgF').open) $('dlgF').showModal();
+  }).catch(() => toast('Non riesco ad aprire le foto'));
+}
+function openFotoOne(id){
+  fotoGet(id).then(f => {
+    if (!f) { openFoto(); return; }
+    fView = f; const d = fDate(f), s = state.sessions.find(x => x.id === id);
+    $('sheetF').innerHTML = '<div class="grab"></div><div class="eyebrow">' + esc(fmt(d)) + (s && BY[s.day] ? ' · ' + esc(BY[s.day].nome) : '') + '</div>' +
+      '<img class="pbig" src="' + fUrl(f.img) + '" alt="Foto progressi">' +
+      '<div class="row2" style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="ghost" data-fsave>Salva in Foto</button><button type="button" class="ghost" data-fdel="' + id + '">Elimina foto</button><button type="button" class="ghost" data-fback>Indietro</button></div>';
+    $('sheetF').scrollTop = 0;
+  });
+}
+$('fotoBody').addEventListener('click', e => { const o = e.target.closest('[data-fopen]'); if (o) { $('sheetF').innerHTML = ''; openFotoOne(o.dataset.fopen); if (!$('dlgF').open) $('dlgF').showModal(); return; } if (e.target.closest('#fotoGo')) openFoto(); });
+$('dlgF').addEventListener('close', () => { fClean(); fView = null; });
+$('dlgF').addEventListener('click', e => {
+  const o = e.target.closest('[data-fopen]'); if (o) { openFotoOne(o.dataset.fopen); return; }
+  if (e.target.closest('[data-fback]')) { openFoto(); return; }
+  const dl = e.target.closest('[data-fdel]');
+  if (dl) { if (!dl.classList.contains('armed')) { dl.classList.add('armed'); dl.textContent = 'Conferma'; return; }
+    fotoDel(dl.dataset.fdel).then(fotoIndex).then(() => { toast('Foto eliminata'); Object.keys(FOTO).length ? openFoto() : $('dlgF').close(); }); return; }
+  if (e.target.closest('[data-fsave]') && fView) {
+    const file = new File([fView.img], 'progressi-' + fDate(fView) + '.jpg', {type: 'image/jpeg'});
+    if (navigator.canShare && navigator.canShare({files: [file]})) navigator.share({files: [file]}).catch(() => {});
+    else { const a = document.createElement('a'); a.href = fUrl(fView.img); a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); }
+  }
+});
+fotoIndex();
+
 // backup
 $('bkCopy').addEventListener('click', () => {
   const txt = JSON.stringify({scheda: 'scheda-pt', cliente: nomeC(), kg: (state.kg || []).map(({id,date,key,kg,rip}) => ({id,date,key,kg,rip})), sessions: state.sessions.map(({id,date,day,variant,at,q,cardio,abs}) => ({id,date,day,variant,at,q,cardio,abs}))});
