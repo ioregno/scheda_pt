@@ -5,6 +5,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <title>Coach</title>
 <link rel="stylesheet" href="tema.css">
+<script src="tono.js"></script>
 <style>
 /* pagina del coach: solo layout dei moduli, colori e font vengono da tema.css */
 .cw{max-width:560px;margin:0 auto;padding:18px 16px 140px;display:flex;flex-direction:column;gap:18px}
@@ -36,6 +37,29 @@ label.f{display:flex;flex-direction:column;gap:5px;font:600 12px/1.2 var(--body)
 .small{font-size:13px;padding:9px 14px}
 .danger{color:#D0021B;border-color:#D0021B}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
+.catres{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.gtiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.gtiles button,.blist button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg);border-radius:16px;padding:16px 14px}
+.gtiles b,.blist b{font:700 16px/1.1 var(--body)}
+.gtiles small,.blist small{color:var(--muted);font:600 13px/1 var(--body)}
+.blist{display:flex;flex-direction:column;gap:6px}
+.blist em{font:600 11px/1 var(--body);font-style:normal;color:var(--accent);margin-left:auto}
+.chosen{display:grid;grid-template-columns:64px 1fr auto;gap:10px;align-items:center;background:var(--bg);border-radius:16px;padding:8px}
+.chosen img,.chosen .noimg{width:64px;height:64px;object-fit:contain;background:#fff;border-radius:12px}
+.chosen b{display:block;font:600 16px/1.2 var(--body)}.chosen small{color:var(--muted)}
+details.more{display:flex;flex-direction:column;gap:10px}
+#sheet>.back{align-self:flex-start}
+details.more>summary{cursor:pointer;font:600 14px/1.2 var(--body);color:var(--muted);padding:6px 0}
+details.more[open]>summary{margin-bottom:10px}
+details.more .f{margin-top:10px}
+.catres button{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:grid;grid-template-columns:56px 1fr;gap:10px;align-items:center;background:var(--bg);border-radius:14px;padding:6px 10px 6px 6px}
+.catres img,.catres .noimg{width:56px;height:56px;object-fit:contain;background:#fff;border-radius:10px}
+.catres b{display:block;font:600 15px/1.25 var(--body)}
+.catres small{color:var(--muted)}
+#recV video,#recV canvas{width:100%;border-radius:16px;background:#000;max-height:44vh;object-fit:contain;display:block;margin-bottom:8px}
+.recst{color:var(--muted);font:600 13px/1.4 var(--body);margin:4px 0}
+.recsay{background:var(--bg);border-radius:14px;padding:12px;font:500 14px/1.4 var(--body);margin:8px 0}
+.catres small i{font-style:normal;color:var(--accent);font-weight:700}
 .chips button{border:1.5px solid var(--line2);background:transparent;border-radius:999px;padding:7px 11px;font:600 13px/1 var(--body)}
 .chips button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .mph{display:flex;gap:10px;align-items:center}
@@ -85,6 +109,10 @@ $('hd').textContent = 'Coach'; $('av').textContent = (C.coach || 'C').trim().cha
 let db = {clienti: []};
 try { const x = JSON.parse(localStorage.getItem(CKEY)); if (x && Array.isArray(x.clienti)) db = x; } catch (e) {}
 const save = () => { try { localStorage.setItem(CKEY, JSON.stringify(db)); } catch (e) { toast('Memoria piena: scarica un backup'); } };
+// macchine scelte dal catalogo dei produttori (catalogo/catalogo.json): restano salvate qui e viaggiano nel link
+const LIB = new Set(Object.keys(M));
+db.cat = db.cat || {};
+Object.keys(db.cat).forEach(id => { if (!M[id]) M[id] = db.cat[id]; });
 let cur = null, tab = {}, view = 'list';
 const get = id => db.clienti.find(c => c.id === id);
 let tt; function toast(m){ const t = $('toast'); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2400); }
@@ -97,7 +125,28 @@ function clean(c){
     giorni: c.giorni.map(g => { const o = {id: g.id, nome: g.nome}; if (g.nota) o.nota = g.nota;
       VV.forEach(v => { if ((g[v] || []).length) o[v] = g[v].map(e => { const x = {}; if (e.m) x.m = e.m; else x.n = e.n || 'Esercizio'; x.s = +e.s || 3; x.r = e.r || '10'; if (e.g && e.g.length) x.g = e.g; if (e.p) x.p = e.p; if (e.c && e.c.length) x.c = e.c; return x; }); });
       return o; }),
-    note: (c.note || []).filter(Boolean)};
+    note: (c.note || []).filter(Boolean), mac: macOf(c)};
+}
+// macchine del catalogo usate nella scheda: nome, marca, muscoli e foto vanno al cliente insieme alla scheda
+function macOf(c){
+  const o = {};
+  c.giorni.forEach(g => VV.forEach(v => (g[v] || []).forEach(e => {
+    const m = e.m && !LIB.has(e.m) && M[e.m]; if (!m || o[e.m]) return;
+    o[e.m] = {n: m.nome, b: m.marca, l: m.linea, d: m.distretto, g: m.gruppi, f: m.foto, u: m.link || m.url || ''};
+  })));
+  return Object.keys(o).length ? o : undefined;
+}
+// ---------- catalogo dei produttori: si scarica solo quando serve (circa 50 KB compresso), le foto una alla volta ----------
+let CAT = null, catP = null;
+function loadCat(){
+  if (CAT) return Promise.resolve(CAT);
+  return catP = catP || fetch('catalogo/catalogo.json').then(r => r.json()).then(d => {
+    const k = d.campi; CAT = d.m.map(a => { const o = {}; k.forEach((x, i) => o[x] = a[i]); return o; });
+    // schede vecchie o caricate da backup: ritrova le macchine del catalogo che mancano
+    const by = {}; CAT.forEach(m => by[m.id] = m);
+    db.clienti.forEach(c => c.giorni.forEach(g => VV.forEach(v => (g[v] || []).forEach(e => { if (e.m && !M[e.m] && by[e.m]) { M[e.m] = by[e.m]; db.cat[e.m] = by[e.m]; } }))));
+    return CAT;
+  }).catch(() => { catP = null; return null; });
 }
 async function encode(c){
   const bytes = new TextEncoder().encode(JSON.stringify(clean(c)));
@@ -156,7 +205,7 @@ function renderList(){
       : '<div class="card"><p style="margin:0">Ancora nessun cliente. Premi <b>Nuovo cliente</b>: puoi partire da una scheda vuota o dalla scheda di esempio e cambiarla.</p></div>') +
     '<details class="card"><summary><b>Backup delle schede</b></summary><p class="hint">Le schede stanno solo in questo telefono o computer. Scarica un backup ogni tanto e conservalo: serve anche per passare a un altro dispositivo.</p>' +
       '<div class="crow"><button type="button" class="ghost small" data-act="bkdown">Scarica backup</button><label class="ghost small" style="cursor:pointer">Carica backup<input type="file" accept=".json,application/json" id="bkfile" hidden></label></div></details>' +
-    '<p class="hint">Libreria: ' + Object.keys(M).length + ' macchine con foto, da config.js. App per i clienti: <a href="' + esc(appUrl()) + '">' + esc(appUrl()) + '</a></p>';
+    '<p class="hint">Libreria: ' + LIB.size + ' macchine da config.js, più il catalogo dei produttori (oltre 2.000 macchine) quando aggiungi un esercizio. App per i clienti: <a href="' + esc(appUrl()) + '">' + esc(appUrl()) + '</a></p>';
 }
 function renderEdit(){
   const c = get(cur); if (!c) { view = 'list'; return renderList(); }
@@ -188,33 +237,197 @@ function renderEdit(){
 
 // ---------- foglio esercizio ----------
 let ed = null;   // {gi, v, i, e}
+// scelta della macchina a passi: muscolo -> marca -> macchine (o ricerca per nome)
+const pk = {step: 'g', g: '', b: '', q: ''};
+let myB = (() => { try { return localStorage.getItem('coach-pt-marca') || ''; } catch (e) { return ''; } })();
+const LIBNAME = 'La tua libreria';
+// macro-gruppi per la scelta della macchina (richiesta di giulio): si guarda il primo muscolo della macchina
+const MACRO = [
+  {n: 'Gambe', g: ['Quadricipiti', 'Femorali', 'Glutei', 'Polpacci', 'Adduttori'],
+   top: [/leg press|pressa|piedi/, /leg extension|estensi/, /leg curl|curl gambe|femoral/, /hack|squat|pendul/, /adduct|abduct|addutt|abdutt|inner|outer|thigh/, /glute|hip|kick|gluteo|slancio|booty/, /calf|polpacc/]},
+  {n: 'Petto e tricipiti', g: ['Petto', 'Tricipiti'],
+   top: [/chest press|bench press|distension|vertical press|panca piana/, /pec|pek|fly|flight|butterfly|croci|pectoral|chest/, /incline|inclinat/, /decline|declinat/, /dip/, /tricep|tricip|french|push ?down|arm ext/]},
+  {n: 'Schiena e bicipiti', g: ['Schiena', 'Bicipiti', 'Lombari'],
+   top: [/lat |lat$|pulldown|pull down|lat machine|lat pull/, /low row|seated row|row|rematore|pulley/, /pull ?over/, /t-bar|t bar/, /chin|assist|trazion/, /bicep|bicip|arm curl|curl/, /back ext|lower back|lombar|hyperext|iperest/]},
+  {n: 'Spalle', g: ['Spalle', 'Trapezio'],
+   top: [/shoulder press|overhead|military|lento|spinte/, /lateral|alzate|deltoid/, /rear|reverse|posterior/, /shrug|trapez/]},
+  {n: 'Addome', g: ['Addominali'],
+   top: [/abdominal|crunch|addomin|\babs?\b/, /rotar|torso|obliqu|twist/, /knee raise|captain|vertical knee|ginocch/]},
+  {n: 'Cavi, panche e rack', g: ['Total body'],
+   top: [/crossover|functional|dual adjust|pulley|cavi|cable/, /smith|multipower/, /power rack|half rack|squat rack|rack|gabbia|cage/, /bench|panca/, /multi|jungle|station|stazion/]}
+];
+const macroOf = m => { const g = (m.gruppi || [])[0]; const x = MACRO.find(o => o.g.includes(g)); return x ? x.n : ''; };
+// quanto è "principale" una macchina: posizione della prima parola chiave trovata nel nome (99 = meno conosciuta)
+const rankOf = (m, mac) => { const o = MACRO.find(x => x.n === mac), n = (m.nome || '').toLowerCase(); if (!o) return 99; const i = o.top.findIndex(r => r.test(n)); return i < 0 ? 99 : i + (/inclin|declin/.test(n) ? .5 : 0); };
+function pool(){
+  const lib = Object.values(M).filter(m => LIB.has(m.id)).map(m => Object.assign({}, m, {lib: true}));
+  return lib.concat(CAT || []);
+}
+const brandOf = m => m.lib ? LIBNAME : m.marca;
 function openEx(gi, v, i){
   const c = get(cur), g = c.giorni[gi];
   const e = i === null ? {m: '', n: '', s: 3, r: '10', g: [], p: ''} : JSON.parse(JSON.stringify(g[v][i]));
-  ed = {gi, v, i, e}; drawEx(); $('dlg').showModal();
+  ed = {gi, v, i, e};
+  if (i === null) { pk.step = 'g'; pk.q = ''; drawPick(); } else drawEx();
+  $('dlg').showModal();
 }
-function machineOpts(sel){
-  const by = {};
-  Object.values(M).forEach(m => { const k = (m.gruppi && m.gruppi[0]) || 'Altro'; (by[k] = by[k] || []).push(m); });
-  const keys = GRUPPI.filter(k => by[k]).concat(Object.keys(by).filter(k => !GRUPPI.includes(k)));
-  return '<option value=""' + (sel ? '' : ' selected') + '>Esercizio libero (senza macchina)</option>' + keys.map(k => '<optgroup label="' + esc(k) + '">' + by[k].map(m => '<option value="' + esc(m.id) + '"' + (m.id === sel ? ' selected' : '') + '>' + esc(m.nome) + (m.marca ? ' · ' + esc(m.marca) : '') + '</option>').join('') + '</optgroup>').join('');
+// ---------- riconoscere la macchina da una foto (riconosci.js: modello sul telefono + confronto con le foto del catalogo) ----------
+// Ricordi: quando il coach sceglie la macchina giusta dopo una foto, l'impronta di quella foto resta salvata (db.ricordi, va anche nel backup).
+// La volta dopo, una foto simile della stessa macchina della sua palestra viene riconosciuta subito.
+db.ricordi = db.ricordi || {};
+const rec = {live: 0, stream: null, cv: null, q: null, top: []};
+const recKey = () => { try { return localStorage.getItem('coach-pt-claude') || ''; } catch (e) { return ''; } };
+let recMod = null; const RC = () => recMod = recMod || import('./riconosci.js');
+function recStop(){ rec.live++; if (rec.stream) { rec.stream.getTracks().forEach(t => t.stop()); rec.stream = null; } }
+$('dlg').addEventListener('close', recStop);
+const recSt = t => { const o = $('recOut'); if (o) o.innerHTML = '<p class="recst">' + esc(t) + '</p>'; };
+const recEtichetta = m => [m.marca, m.nome, m.linea].filter(Boolean).join(' · ');
+const recMem = R => Object.keys(db.ricordi).flatMap(id => db.ricordi[id].map(x => ({id, v: R.decodifica(x)})));
+function recRicorda(id){
+  if (!rec.q || !recMod) return;
+  recMod.then(R => { const a = db.ricordi[id] = db.ricordi[id] || []; a.unshift(R.codifica(rec.q)); a.length = Math.min(a.length, 4); save(); });
+}
+const recRow = (m, nota) => machRow(Object.assign({}, m, {linea: [m.marca, m.linea].filter(Boolean).join(' · ') + (nota ? ' · ' + nota : ''), marca: m.lib ? [m.marca, nota].filter(Boolean).join(' · ') : m.marca}));
+function recShow(top){
+  const by = {}; pool().forEach(m => by[m.id] = m);
+  const rows = top.map(t => ({t, m: by[t.id]})).filter(x => x.m);
+  const g = rows.length ? rows[0].t.sim : 0;
+  // soglie: con foto vere di palestra la macchina giusta del catalogo raramente supera 0,75; un ricordo della stessa macchina sì
+  const verdetto = g >= .85 ? 'Molto probabile' : g >= .7 ? 'Possibile: controlla' : 'Poco sicuro: sono macchine dalla forma simile';
+  $('recOut').innerHTML = '<div class="eyebrow">' + verdetto + '</div><ul class="catres">' + rows.slice(0, 5).map(x => recRow(x.m, x.t.mem ? 'già vista qui' : '')).join('') + '</ul>' +
+    (rec.cv && !rec.stream ? '<button type="button" class="ghost small" data-r="claude">Chiedi a Claude</button>' : '') + '<div id="recAI"></div>' +
+    '<p class="hint">Tocca quella giusta: l\'app se la ricorda e la prossima foto della stessa macchina la riconosce meglio. Se non c\'è, torna ai muscoli o cercala per nome.</p>';
+}
+async function recCalcola(R, cv){ rec.q = await R.impronta(cv); return R.confronta(rec.q, recMem(R)); }
+async function recFoto(file){
+  recStop(); const id = rec.live;
+  try {
+    recSt('Leggo la foto…'); const R = await RC(); rec.cv = await R.preparaFoto(file);
+    const v = $('recV'); if (!v) return; v.replaceChildren(rec.cv);
+    await loadCat(); recSt('Preparo il riconoscimento… la prima volta scarico 24 MB (serve internet).');
+    await R.pronto(); if (rec.live !== id) return;
+    rec.top = R.migliori(await recCalcola(R, rec.cv), 12); if (rec.live === id) recShow(rec.top);
+  } catch (e) { recSt('Non ci sono riuscito: ' + (e.message || e) + '. Serve internet la prima volta.'); }
+}
+async function recLive(){
+  recStop(); const id = rec.live;
+  try { rec.stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: 'environment'}}, audio: false}); }
+  catch (e) { recSt('Fotocamera non disponibile o non permessa: usa "Scatta o scegli una foto".'); return; }
+  const v = document.createElement('video'); v.playsInline = true; v.muted = true; v.srcObject = rec.stream;
+  const box = $('recV'); box.replaceChildren(v);
+  const stop = document.createElement('button'); stop.type = 'button'; stop.className = 'ghost small'; stop.dataset.r = 'stop'; stop.textContent = 'Ferma e tieni questa foto'; box.appendChild(stop);
+  await v.play(); recSt('Preparo il riconoscimento… la prima volta scarico 24 MB (serve internet).');
+  try {
+    const R = await RC(); await loadCat(); await R.pronto();
+    let ema = null, last = '';
+    while (rec.live === id) {
+      const cv = await R.preparaFoto(v, 336), res = await recCalcola(R, cv);
+      if (rec.live !== id) return;
+      // media degli ultimi fotogrammi: la lista non salta a ogni movimento
+      ema = ema && ema.length === res.sim.length ? ema.map((x, i) => .5 * x + .5 * res.sim[i]) : res.sim; rec.cv = cv;
+      const top = R.migliori({ids: res.ids, sim: ema, n: res.n}, 12), k = top.slice(0, 5).map(t => t.id).join();
+      rec.top = top; if (k !== last) { last = k; recShow(top); }
+      await new Promise(r => setTimeout(r, 120));
+    }
+  } catch (e) { if (rec.live === id) recSt('Non ci sono riuscito: ' + (e.message || e)); }
+}
+// cerca nel catalogo il nome letto da Claude (es. "Panatta" + "Power Row")
+function recCercaNome(r){
+  const low = x => String(x || '').toLowerCase(), w = low(r.nome).split(/[^a-z0-9àèéìòù]+/).filter(x => x.length > 1), marca = low(r.marca).split(/\s+/)[0];
+  if (!w.length) return [];
+  return pool().map(m => { const n = low(m.nome), hit = w.filter(x => n.includes(x)).length; return {m, p: hit / w.length + (marca && low(m.marca).includes(marca) ? .5 : 0) - Math.abs(n.split(/\s+/).length - w.length) * .02}; })
+    .filter(x => x.p >= .99).sort((a, b) => b.p - a.p).slice(0, 3).map(x => x.m);
+}
+$('dlg').addEventListener('change', e => { if (e.target.id === 'recF' && e.target.files[0]) recFoto(e.target.files[0]); });
+$('dlg').addEventListener('input', e => { if (e.target.id === 'recK') { try { localStorage.setItem('coach-pt-claude', e.target.value.trim()); } catch (x) {} } });
+$('dlg').addEventListener('click', async e => {
+  const b = e.target.closest('[data-r]'); if (!b) return;
+  const a = b.dataset.r;
+  if (a === 'file') $('recF').click();
+  else if (a === 'live') recLive();
+  else if (a === 'stop') { recStop(); const cv = rec.cv; if (cv) { $('recV').replaceChildren(cv); await loadCat(); recShow(rec.top); } }
+  else if (a === 'claude') {
+    const k = recKey(); if (!k) { toast('Inserisci prima la chiave API (sezione sotto)'); const d = document.querySelector('#sheet details.more'); if (d) { d.open = true; d.scrollIntoView(); } return; }
+    const out = $('recAI'); out.innerHTML = '<p class="recst">Claude sta guardando la foto…</p>';
+    try {
+      const by = {}; pool().forEach(m => by[m.id] = m);
+      const cand = rec.top.filter(t => by[t.id]).slice(0, 12).map(t => ({id: t.id, etichetta: recEtichetta(by[t.id])}));
+      const r = await (await RC()).chiediAClaude(rec.cv, cand, k);
+      const trovate = (r.id && by[r.id] ? [by[r.id]] : []).concat(recCercaNome(r)).filter((m, i, a) => a.findIndex(x => x.id === m.id) === i).slice(0, 3);
+      const letto = [r.marca, r.nome].filter(Boolean).join(' ') || r.tipo || 'non lo so';
+      out.innerHTML = '<div class="recsay"><b>Claude: ' + esc(letto) + '</b>' + (r.tipo && r.nome ? ' (' + esc(r.tipo) + ')' : '') + '<br>' + esc(r.motivo || '') +
+        (trovate.length ? '' : '<br>Non l\'ho trovata nel catalogo: cercala per nome o scegli "Esercizio senza macchina".') + '</div>' +
+        (trovate.length ? '<ul class="catres">' + trovate.map(m => recRow(m, '')).join('') + '</ul>' : '');
+    } catch (err) { out.innerHTML = '<p class="recst">Non ho potuto chiedere a Claude: ' + esc(err.message || err) + '</p>'; }
+  }
+});
+function drawPick(){
+  if (!CAT) loadCat().then(c => { if ($('dlg').open && ed && ed.picking && c && pk.step !== 'r') drawPick(); });
+  ed.picking = true; recStop();
+  const all = pool(), sh = $('sheet');
+  let h = '<div class="grab"></div>';
+  if (pk.step === 'g') {
+    h += '<h3>Che muscolo alleni?</h3>' +
+      '<label class="f"><input id="pkQ" type="search" value="' + esc(pk.q) + '" placeholder="Oppure cerca per nome: chest press, leg curl…" autocomplete="off"></label>' +
+      '<div id="pkBody">' + (pk.q ? pickSearch(all) : '<div class="gtiles">' + MACRO.map(o => { const n = all.filter(m => macroOf(m) === o.n).length; return n ? '<button type="button" data-pg="' + esc(o.n) + '"><b>' + esc(o.n) + '</b><small>' + n + '</small></button>' : ''; }).join('') + '</div>' +
+        (CAT ? '' : '<p class="hint">Carico il catalogo dei produttori… (serve internet)</p>')) + '</div>' +
+      '<button type="button" class="ghost" data-pstep="r">Riconosci da una foto</button>' +
+      '<button type="button" class="ghost" data-x="free">Esercizio senza macchina</button>';
+  } else if (pk.step === 'r') {
+    h += '<button type="button" class="back" data-pstep="g">‹ Muscoli</button><h3>Riconosci da una foto</h3>' +
+      '<p class="hint">Fotografa la macchina intera, da davanti o di tre quarti, con poca gente intorno. Il confronto avviene sul telefono: la foto non va a nessuno.</p>' +
+      '<input id="recF" type="file" accept="image/*" hidden>' +
+      '<button type="button" class="primary" data-r="file">Scatta o scegli una foto</button>' +
+      '<button type="button" class="ghost" data-r="live">Inquadra dal vivo</button>' +
+      '<div id="recV"></div><div id="recOut"></div>' +
+      '<details class="more"><summary>Secondo parere con Claude (facoltativo)</summary>' +
+      '<p class="hint">Claude legge anche loghi e scritte e sbaglia meno sulle macchine simili. Serve internet e una tua chiave API di Anthropic (console.anthropic.com): costa pochi centesimi a foto. La chiave resta solo su questo telefono; la foto va ad Anthropic solo quando premi "Chiedi a Claude".</p>' +
+      '<label class="f">Chiave API<input id="recK" type="password" autocomplete="off" placeholder="sk-ant-…" value="' + esc(recKey()) + '"></label></details>';
+  } else if (pk.step === 'b') {
+    const by = {}; all.filter(m => macroOf(m) === pk.g).forEach(m => { const b = brandOf(m); by[b] = (by[b] || 0) + 1; });
+    const names = Object.keys(by).sort((a, b) => (a === LIBNAME ? -2 : a === myB ? -1 : 0) - (b === LIBNAME ? -2 : b === myB ? -1 : 0) || a.localeCompare(b));
+    h += '<button type="button" class="back" data-pstep="g">‹ Muscoli</button><h3>' + esc(pk.g) + '</h3><p class="hint">Scegli la marca della macchina.</p>' +
+      '<div class="blist">' + names.map(b => '<button type="button" data-pb="' + esc(b) + '"><b>' + esc(b) + '</b>' + (b === myB ? '<em>ultima usata</em>' : '') + '<small>' + by[b] + '</small></button>').join('') + '</div>';
+  } else {
+    const list = all.filter(m => macroOf(m) === pk.g && brandOf(m) === pk.b).map(m => Object.assign({}, m, {rk: rankOf(m, pk.g)}));
+    list.sort((a, b) => a.rk - b.rk || (a.linea || '').localeCompare(b.linea || '') || a.nome.localeCompare(b.nome));
+    const parti = [['Le più usate', list.filter(m => !m.stato && m.rk < 99)], ['Altre', list.filter(m => !m.stato && m.rk === 99)], ['Fuori produzione', list.filter(m => m.stato)]].filter(p => p[1].length);
+    h += '<button type="button" class="back" data-pstep="b">‹ ' + esc(pk.g) + '</button><h3>' + esc(pk.b) + '</h3>' +
+      parti.map(p => (parti.length > 1 ? '<div class="eyebrow">' + p[0] + ' · ' + p[1].length + '</div>' : '') + '<ul class="catres">' + p[1].map(machRow).join('') + '</ul>').join('');
+  }
+  h += '<button type="button" class="ghost close" data-x="' + (ed.i === null && !ed.e.m && !ed.e.n ? 'no' : 'back') + '">' + (ed.i === null && !ed.e.m && !ed.e.n ? 'Annulla' : 'Indietro') + '</button>';
+  sh.innerHTML = h;
+}
+const machRow = m => '<li><button type="button" data-cat="' + esc(m.id) + '">' + (m.foto ? '<img src="' + esc(m.foto) + (m.lib ? '' : '?c') + '" alt="" loading="lazy">' : '<span class="noimg"></span>') +
+  '<span><b>' + esc(m.nome) + '</b><small>' + esc(m.lib ? (m.marca || '') : (m.linea || '')) + (m.stato ? ' · ' + esc(m.stato) : '') + '</small></span></button></li>';
+function pickSearch(all){
+  const w = pk.q.toLowerCase().split(/\s+/).filter(Boolean);
+  const res = all.filter(m => w.every(x => (m.nome + ' ' + (m.linea || '') + ' ' + (m.marca || '')).toLowerCase().includes(x)));
+  return res.length ? '<ul class="catres">' + res.slice(0, 60).map(m => machRow(Object.assign({}, m, {linea: [m.marca, m.linea].filter(Boolean).join(' · ')}))).join('') + '</ul>' + (res.length > 60 ? '<p class="hint">Altre ' + (res.length - 60) + ': scrivi di più per restringere.</p>' : '') : '<p class="hint">Nessuna macchina trovata.</p>';
 }
 function drawEx(){
+  ed.picking = false; recStop();
   const e = ed.e, m = e.m && M[e.m];
+  const more = !!(e.p || (e.c && e.c.length));
   $('sheet').innerHTML = '<div class="grab"></div><h3>' + (ed.i === null ? 'Nuovo esercizio' : 'Esercizio ' + (ed.i + 1)) + '</h3>' +
-    '<label class="f">Macchina<select id="exM">' + machineOpts(e.m) + '</select></label>' +
-    (m ? '<div class="mph">' + (m.foto ? '<img src="' + esc(m.foto) + '" alt="">' : '') + '<span class="hint">' + esc(m.distretto || '') + '</span></div>'
-       : '<label class="f">Nome dell\'esercizio<input id="exN" value="' + esc(e.n) + '" placeholder="Es. Panca piana con bilanciere"></label>') +
+    (m ? '<div class="chosen">' + (m.foto ? '<img src="' + esc(m.foto) + (LIB.has(m.id) ? '' : '?c') + '" alt="">' : '<span class="noimg"></span>') +
+          '<span><b>' + esc(m.nome) + '</b><small>' + esc([m.marca, m.linea].filter(Boolean).join(' · ')) + '</small></span><button type="button" class="ghost small" data-x="pick">Cambia</button></div>'
+       : '<label class="f">Nome dell\'esercizio<input id="exN" value="' + esc(e.n) + '" placeholder="Es. Panca piana con bilanciere"></label><button type="button" class="ghost small" data-x="pick">Scegli una macchina</button>') +
     '<div class="two"><label class="f">Serie<input id="exS" type="number" inputmode="numeric" min="1" max="12" value="' + esc(e.s) + '"></label>' +
     '<label class="f">Ripetizioni<input id="exR" value="' + esc(e.r) + '" placeholder="8-10"></label></div>' +
-    '<div class="f" style="display:flex;flex-direction:column;gap:6px;font:600 12px/1.2 var(--body);color:var(--muted)">Muscoli<div class="chips">' + GRUPPI.map(x => '<button type="button" data-chip="' + esc(x) + '" aria-pressed="' + (e.g || []).includes(x) + '">' + esc(x) + '</button>').join('') + '</div></div>' +
-    '<label class="f">Perché, o un consiglio (facoltativo)<textarea id="exP" placeholder="Es. tieni i gomiti stretti">' + esc(e.p) + '</textarea></label>' +
-    '<label class="f">Come eseguirlo, un passo per riga (facoltativo: se vuoto usa la spiegazione della macchina)<textarea id="exC">' + esc((e.c || []).join('\n')) + '</textarea></label>' +
+    '<details class="more"' + (more ? ' open' : '') + '><summary>Muscoli, consiglio e come si fa</summary>' +
+    '<div class="chips">' + GRUPPI.map(x => '<button type="button" data-chip="' + esc(x) + '" aria-pressed="' + (e.g || []).includes(x) + '">' + esc(x) + '</button>').join('') + '</div>' +
+    '<label class="f">Perché, o un consiglio<textarea id="exP" placeholder="Es. tieni i gomiti stretti">' + esc(e.p) + '</textarea></label>' +
+    '<label class="f">Come eseguirlo, un passo per riga<textarea id="exC" placeholder="Se lo lasci vuoto usa la spiegazione della macchina">' + esc((e.c || []).join('\n')) + '</textarea></label></details>' +
     '<button type="button" class="primary" data-x="ok">' + (ed.i === null ? 'Aggiungi' : 'Salva') + '</button>' +
     (ed.i === null ? '' : '<button type="button" class="ghost danger" data-x="del">Elimina esercizio</button>') +
     '<button type="button" class="ghost close" data-x="no">Annulla</button>';
 }
+$('dlg').addEventListener('input', e => {
+  if (e.target.id === 'pkQ') { pk.q = e.target.value; const all = pool(); $('pkBody').innerHTML = pk.q ? pickSearch(all) : ''; if (!pk.q) drawPick(); }
+});
 function readEx(){
+  if (!$('exS')) return;
   const e = ed.e;
   e.s = Math.max(1, Math.min(12, Math.round(+$('exS').value) || 3)); e.r = $('exR').value.trim() || '10';
   if ($('exN')) e.n = $('exN').value.trim();
@@ -222,14 +435,27 @@ function readEx(){
   if (!e.c.length) delete e.c; if (!e.p) delete e.p;
   if (e.m) delete e.n; else delete e.m;
 }
-$('dlg').addEventListener('change', e => {
-  if (e.target.id === 'exM') { readEx(); ed.e.m = e.target.value; const m = M[ed.e.m]; if (m && m.gruppi && m.gruppi.length) ed.e.g = m.gruppi.slice(); drawEx(); }
-});
 $('dlg').addEventListener('click', e => {
   if (e.target === $('dlg')) { $('dlg').close(); return; }
   const ch = e.target.closest('[data-chip]');
   if (ch) { const x = ch.dataset.chip, g = ed.e.g = ed.e.g || []; const i = g.indexOf(x); if (i < 0) g.push(x); else g.splice(i, 1); ch.setAttribute('aria-pressed', i < 0); return; }
+  const pg = e.target.closest('[data-pg]'); if (pg) { pk.g = pg.dataset.pg; pk.step = 'b'; drawPick(); $('sheet').scrollTop = 0; return; }
+  const pb = e.target.closest('[data-pb]'); if (pb) { pk.b = pb.dataset.pb; pk.step = 'm'; drawPick(); $('sheet').scrollTop = 0; return; }
+  const ps = e.target.closest('[data-pstep]'); if (ps) { pk.step = ps.dataset.pstep; drawPick(); return; }
+  const pick = e.target.closest('[data-cat]');
+  if (pick) {
+    const m = pool().find(x => x.id === pick.dataset.cat);
+    if (m) {
+      if (!m.lib) { M[m.id] = m; db.cat[m.id] = m; save(); myB = m.marca; try { localStorage.setItem('coach-pt-marca', myB); } catch (err) {} }
+      if (pk.step === 'r' && ed.picking) recRicorda(m.id);
+      ed.e.m = m.id; delete ed.e.n; if (m.gruppi && m.gruppi.length) ed.e.g = m.gruppi.filter(x => GRUPPI.includes(x));
+    }
+    drawEx(); return;
+  }
   const b = e.target.closest('[data-x]'); if (!b) return;
+  if (b.dataset.x === 'pick') { readEx(); pk.g = ed.e.m && M[ed.e.m] ? macroOf(M[ed.e.m]) : ''; pk.step = pk.g ? 'b' : 'g'; pk.q = ''; drawPick(); return; }
+  if (b.dataset.x === 'free') { ed.e.m = ''; drawEx(); setTimeout(() => $('exN') && $('exN').focus(), 50); return; }
+  if (b.dataset.x === 'back') { drawEx(); return; }
   const c = get(cur), g = c.giorni[ed.gi];
   if (b.dataset.x === 'ok') {
     readEx();
@@ -316,7 +542,7 @@ function openNew(){
   $('dlg').showModal();
 }
 function backupDown(){
-  const blob = new Blob([JSON.stringify({tipo: 'coach-pt', data: iso(new Date()), clienti: db.clienti}, null, 1)], {type: 'application/json'});
+  const blob = new Blob([JSON.stringify({tipo: 'coach-pt', data: iso(new Date()), clienti: db.clienti, cat: db.cat, ricordi: db.ricordi}, null, 1)], {type: 'application/json'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'schede-clienti-' + iso(new Date()) + '.json'; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
@@ -325,6 +551,8 @@ document.addEventListener('change', e => {
   e.target.files[0].text().then(txt => {
     const j = JSON.parse(txt); if (!j || !Array.isArray(j.clienti)) throw 0;
     const have = new Set(db.clienti.map(c => c.id)); let n = 0, u = 0;
+    if (j.ricordi && typeof j.ricordi === 'object') Object.keys(j.ricordi).forEach(id => { if (!db.ricordi[id] && Array.isArray(j.ricordi[id])) db.ricordi[id] = j.ricordi[id]; });
+    if (j.cat && typeof j.cat === 'object') Object.keys(j.cat).forEach(id => { if (!db.cat[id]) db.cat[id] = j.cat[id]; if (!M[id]) M[id] = j.cat[id]; });
     j.clienti.forEach(c => { if (!c || !c.id || !Array.isArray(c.giorni)) return; if (have.has(c.id)) { const i = db.clienti.findIndex(x => x.id === c.id); if ((c.data || '') > (db.clienti[i].data || '')) { db.clienti[i] = c; u++; } } else { db.clienti.push(c); n++; } });
     save(); render(); toast('Backup caricato: ' + n + ' nuovi, ' + u + ' aggiornati');
   }).catch(() => toast('File non valido'));
