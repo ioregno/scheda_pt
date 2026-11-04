@@ -56,6 +56,10 @@ details.more .f{margin-top:10px}
 .catres img,.catres .noimg{width:56px;height:56px;object-fit:contain;background:#fff;border-radius:10px}
 .catres b{display:block;font:600 15px/1.25 var(--body)}
 .catres small{color:var(--muted)}
+#recV video,#recV canvas{width:100%;border-radius:16px;background:#000;max-height:44vh;object-fit:contain;display:block;margin-bottom:8px}
+.recst{color:var(--muted);font:600 13px/1.4 var(--body);margin:4px 0}
+.recsay{background:var(--bg);border-radius:14px;padding:12px;font:500 14px/1.4 var(--body);margin:8px 0}
+.catres small i{font-style:normal;color:var(--accent);font-weight:700}
 .chips button{border:1.5px solid var(--line2);background:transparent;border-radius:999px;padding:7px 11px;font:600 13px/1 var(--body)}
 .chips button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .mph{display:flex;gap:10px;align-items:center}
@@ -267,9 +271,77 @@ function openEx(gi, v, i){
   if (i === null) { pk.step = 'g'; pk.q = ''; drawPick(); } else drawEx();
   $('dlg').showModal();
 }
+// ---------- riconoscere la macchina da una foto (riconosci.js: modello sul telefono + confronto con le foto del catalogo) ----------
+const rec = {live: 0, stream: null, cv: null, top: []};
+const recKey = () => { try { return localStorage.getItem('coach-pt-claude') || ''; } catch (e) { return ''; } };
+let recMod = null; const RC = () => recMod = recMod || import('./riconosci.js');
+function recStop(){ rec.live++; if (rec.stream) { rec.stream.getTracks().forEach(t => t.stop()); rec.stream = null; } }
+$('dlg').addEventListener('close', recStop);
+const recSt = t => { const o = $('recOut'); if (o) o.innerHTML = '<p class="recst">' + esc(t) + '</p>'; };
+const recEtichetta = m => [m.marca, m.nome, m.linea].filter(Boolean).join(' · ');
+function recShow(top){
+  const all = pool(), by = {}; all.forEach(m => by[m.id] = m);
+  const rows = top.map(t => ({t, m: by[t.id]})).filter(x => x.m);
+  const g = rows.length ? rows[0].t.sim : 0;
+  // soglie misurate su foto di prova: sotto 0,5 non è una macchina; tra 0,7 e 0,85 la macchina giusta e una sbagliata si somigliano
+  const verdetto = g >= .85 ? 'Molto probabile' : g >= .7 ? 'Possibile: controlla la foto' : g >= .5 ? 'Poco sicuro: prova un’altra inquadratura' : 'Non vedo una macchina del catalogo';
+  $('recOut').innerHTML = '<div class="eyebrow">' + verdetto + '</div><ul class="catres">' + rows.slice(0, 5).map(x => machRow(Object.assign({}, x.m, {linea: [x.m.marca, x.m.linea].filter(Boolean).join(' · ')}))).join('') + '</ul>' +
+    (rec.cv && !rec.stream ? '<button type="button" class="ghost small" data-r="claude">Chiedi a Claude</button>' : '') + '<div id="recAI"></div>';
+}
+async function recFoto(file){
+  recStop(); const id = rec.live;
+  try {
+    recSt('Leggo la foto…'); const R = await RC(); rec.cv = await R.preparaFoto(file);
+    const v = $('recV'); if (!v) return; v.replaceChildren(rec.cv);
+    await loadCat(); recSt('Preparo il riconoscimento… la prima volta scarico 24 MB (serve internet).');
+    await R.pronto(); if (rec.live !== id) return;
+    rec.sim = await R.somiglianze(rec.cv); rec.top = await R.migliori(rec.sim, 12); recShow(rec.top);
+  } catch (e) { recSt('Non ci sono riuscito: ' + (e.message || e) + '. Serve internet la prima volta.'); }
+}
+async function recLive(){
+  recStop(); const id = rec.live;
+  try { rec.stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: 'environment'}}, audio: false}); }
+  catch (e) { recSt('Fotocamera non disponibile o non permessa: usa "Scatta o scegli una foto".'); return; }
+  const v = document.createElement('video'); v.playsInline = true; v.muted = true; v.srcObject = rec.stream;
+  const box = $('recV'); box.replaceChildren(v);
+  const stop = document.createElement('button'); stop.type = 'button'; stop.className = 'ghost small'; stop.dataset.r = 'stop'; stop.textContent = 'Ferma e tieni questa foto'; box.appendChild(stop);
+  await v.play(); recSt('Preparo il riconoscimento… la prima volta scarico 24 MB (serve internet).');
+  try {
+    const R = await RC(); await loadCat(); await R.pronto();
+    let ema = null, last = '';
+    while (rec.live === id) {
+      const cv = await R.preparaFoto(v, 336), sim = await R.somiglianze(cv);
+      if (rec.live !== id) return;
+      ema = ema ? ema.map((x, i) => .5 * x + .5 * sim[i]) : sim; rec.cv = cv; rec.sim = ema;
+      const top = await R.migliori(ema, 12), k = top.slice(0, 5).map(t => t.id).join();
+      rec.top = top; if (k !== last) { last = k; recShow(top); }
+      await new Promise(r => setTimeout(r, 120));
+    }
+  } catch (e) { if (rec.live === id) recSt('Non ci sono riuscito: ' + (e.message || e)); }
+}
+$('dlg').addEventListener('change', e => { if (e.target.id === 'recF' && e.target.files[0]) recFoto(e.target.files[0]); });
+$('dlg').addEventListener('input', e => { if (e.target.id === 'recK') { try { localStorage.setItem('coach-pt-claude', e.target.value.trim()); } catch (x) {} } });
+$('dlg').addEventListener('click', async e => {
+  const b = e.target.closest('[data-r]'); if (!b) return;
+  const a = b.dataset.r;
+  if (a === 'file') $('recF').click();
+  else if (a === 'live') recLive();
+  else if (a === 'stop') { recStop(); const cv = rec.cv; if (cv) { $('recV').replaceChildren(cv); await loadCat(); recShow(rec.top); } }
+  else if (a === 'claude') {
+    const k = recKey(); if (!k) { toast('Inserisci prima la chiave API (sezione sotto)'); const d = document.querySelector('#sheet details.more'); if (d) { d.open = true; d.scrollIntoView(); } return; }
+    const out = $('recAI'); out.innerHTML = '<p class="recst">Claude sta guardando la foto…</p>';
+    try {
+      const by = {}; pool().forEach(m => by[m.id] = m);
+      const cand = rec.top.filter(t => by[t.id]).slice(0, 12).map(t => ({id: t.id, etichetta: recEtichetta(by[t.id])}));
+      const r = await (await RC()).chiediAClaude(rec.cv, cand, k), m = r.id && by[r.id];
+      out.innerHTML = '<div class="recsay"><b>Claude: ' + esc(m ? recEtichetta(m) : 'nessuno dei candidati') + '</b><br>' + esc(r.motivo || '') + (m ? '' : '<br>Secondo Claude è: ' + esc([r.marca, r.tipo].filter(Boolean).join(' · ') + '. Cercalo per nome qui sopra.')) + '</div>' +
+        (m ? '<ul class="catres">' + machRow(Object.assign({}, m, {linea: [m.marca, m.linea].filter(Boolean).join(' · ')})) + '</ul>' : '');
+    } catch (err) { out.innerHTML = '<p class="recst">Non ho potuto chiedere a Claude: ' + esc(err.message || err) + '</p>'; }
+  }
+});
 function drawPick(){
-  if (!CAT) loadCat().then(c => { if ($('dlg').open && ed && ed.picking && c) drawPick(); });
-  ed.picking = true;
+  if (!CAT) loadCat().then(c => { if ($('dlg').open && ed && ed.picking && c && pk.step !== 'r') drawPick(); });
+  ed.picking = true; recStop();
   const all = pool(), sh = $('sheet');
   let h = '<div class="grab"></div>';
   if (pk.step === 'g') {
@@ -277,7 +349,18 @@ function drawPick(){
       '<label class="f"><input id="pkQ" type="search" value="' + esc(pk.q) + '" placeholder="Oppure cerca per nome: chest press, leg curl…" autocomplete="off"></label>' +
       '<div id="pkBody">' + (pk.q ? pickSearch(all) : '<div class="gtiles">' + MACRO.map(o => { const n = all.filter(m => macroOf(m) === o.n).length; return n ? '<button type="button" data-pg="' + esc(o.n) + '"><b>' + esc(o.n) + '</b><small>' + n + '</small></button>' : ''; }).join('') + '</div>' +
         (CAT ? '' : '<p class="hint">Carico il catalogo dei produttori… (serve internet)</p>')) + '</div>' +
+      '<button type="button" class="ghost" data-pstep="r">Riconosci da una foto</button>' +
       '<button type="button" class="ghost" data-x="free">Esercizio senza macchina</button>';
+  } else if (pk.step === 'r') {
+    h += '<button type="button" class="back" data-pstep="g">‹ Muscoli</button><h3>Riconosci da una foto</h3>' +
+      '<p class="hint">Fotografa la macchina intera, da davanti o di tre quarti, con poca gente intorno. Il confronto avviene sul telefono: la foto non va a nessuno.</p>' +
+      '<input id="recF" type="file" accept="image/*" hidden>' +
+      '<button type="button" class="primary" data-r="file">Scatta o scegli una foto</button>' +
+      '<button type="button" class="ghost" data-r="live">Inquadra dal vivo</button>' +
+      '<div id="recV"></div><div id="recOut"></div>' +
+      '<details class="more"><summary>Secondo parere con Claude (facoltativo)</summary>' +
+      '<p class="hint">Claude legge anche loghi e scritte e sbaglia meno sulle macchine simili. Serve internet e una tua chiave API di Anthropic (console.anthropic.com): costa pochi centesimi a foto. La chiave resta solo su questo telefono; la foto va ad Anthropic solo quando premi "Chiedi a Claude".</p>' +
+      '<label class="f">Chiave API<input id="recK" type="password" autocomplete="off" placeholder="sk-ant-…" value="' + esc(recKey()) + '"></label></details>';
   } else if (pk.step === 'b') {
     const by = {}; all.filter(m => macroOf(m) === pk.g).forEach(m => { const b = brandOf(m); by[b] = (by[b] || 0) + 1; });
     const names = Object.keys(by).sort((a, b) => (a === LIBNAME ? -2 : a === myB ? -1 : 0) - (b === LIBNAME ? -2 : b === myB ? -1 : 0) || a.localeCompare(b));
@@ -301,7 +384,7 @@ function pickSearch(all){
   return res.length ? '<ul class="catres">' + res.slice(0, 60).map(m => machRow(Object.assign({}, m, {linea: [m.marca, m.linea].filter(Boolean).join(' · ')}))).join('') + '</ul>' + (res.length > 60 ? '<p class="hint">Altre ' + (res.length - 60) + ': scrivi di più per restringere.</p>' : '') : '<p class="hint">Nessuna macchina trovata.</p>';
 }
 function drawEx(){
-  ed.picking = false;
+  ed.picking = false; recStop();
   const e = ed.e, m = e.m && M[e.m];
   const more = !!(e.p || (e.c && e.c.length));
   $('sheet').innerHTML = '<div class="grab"></div><h3>' + (ed.i === null ? 'Nuovo esercizio' : 'Esercizio ' + (ed.i + 1)) + '</h3>' +
