@@ -10,6 +10,8 @@
 # Il sito esce in <cartella_del_pt>/sito/ e si trascina così com'è su Netlify (o si ricarica sullo stesso sito).
 # Ogni volta che lo rilanci la "versione" sale di 1 da sola: i telefoni di coach e clienti prendono la copia nuova.
 # Per togliere la prova a tempo dopo il pagamento: in dati.json metti "scadenza": "" e rilancia.
+# La copia parte vuota (nessuna scheda d'esempio); con "esempio": true tiene quella di base.
+# Pacchetto 99 €: "macchine": [] (il PT usa il catalogo o scrive gli esercizi a mano). Pacchetto 139 €: le sue macchine con le foto.
 import json, os, re, shutil, subprocess, sys, unicodedata
 
 QUI = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # cartella dell'app (radice del repo)
@@ -25,6 +27,7 @@ ESEMPIO_DATI = {
     "indirizzo": "https://mario-rossi-pt.netlify.app/",
     "scadenza": "",
     "assistenza": "",
+    "esempio": False,
     "macchine": [
         {"nome": "Leg press", "foto": "leg-press.jpg", "marca": "Panatta", "gruppi": ["Quadricipiti", "Glutei"],
          "esecuzione": ["Schiena ben appoggiata", "Piedi alla larghezza delle spalle", "Scendi piano, spingi senza bloccare le ginocchia"],
@@ -154,6 +157,10 @@ def main():
                 if e.get("m") and e["m"] not in ids:
                     e["n"] = nomi_base.get(e["m"], e["m"])
                     del e["m"]
+
+    # la copia del PT parte vuota: niente scheda d'esempio, a meno che in dati.json ci sia "esempio": true
+    if d.get("esempio") is not True:
+        esempio = None
 
     cfg = dict(base)
     cfg.update({

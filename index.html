@@ -643,7 +643,9 @@ document.addEventListener('click', e => {
   const inDay = st.closest('#sheetD'); setQuality(st.dataset.star, +st.dataset.q);
   if (inDay) { const sx = state.sessions.find(x => x.id === st.dataset.star); if (sx) openDay(sx.date); }
 });
-document.addEventListener('click', e => { if (e.target.id === 'demoGo' || e.target.id === 'demoGo2' || e.target.id === 'demoGo3') setDemo(true); if (e.target.id === 'demoExit') setDemo(false); });
+// copia di un PT senza scheda d'esempio: niente tasti "Guarda un esempio"
+if (!C.esempio) document.head.insertAdjacentHTML('beforeend', '<style>#demoGo,#demoGo2,#demoGo3{display:none!important}</style>');
+document.addEventListener('click', e => { if (C.esempio && (e.target.id === 'demoGo' || e.target.id === 'demoGo2' || e.target.id === 'demoGo3')) setDemo(true); if (e.target.id === 'demoExit') setDemo(false); });
 setSync(); render();
 // prova per chi valuta l'app (link prova.html → index.html#prova): esempio senza salvare, Esci torna alla presentazione
 const PROVA = location.hash === '#prova';
