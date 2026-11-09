@@ -112,6 +112,9 @@ dialog .sheet label.f{color:var(--muted)}
 .wzdone h2{margin:0}
 .catres button[aria-pressed="true"]{outline:2px solid var(--accent)}
 .chk{color:#C76A1E;font-weight:700}
+.wzmano{align-self:center;margin-top:4px}
+.wztesto textarea{min-height:300px;font:500 16px/1.5 var(--body)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 </style>
 </head><body>
 <header class="apphead"><h1 id="hd">Coach</h1><span class="avatar" id="av" aria-hidden="true"></span></header>
@@ -268,7 +271,8 @@ function renderEdit(){
                                 : '<button type="button" class="primary" data-act="send">Manda al cliente</button>';
   let h = SOLO ? '<div class="top"><span class="eyebrow">' + (C.app || 'Scheda') + '</span><button type="button" class="ghost small" data-act="wiz">Nome e palestra</button></div>' +
       (c.nuova ? '<section class="card wzdone"><div class="eyebrow">' + esc(SMOD ? SMOD.riassunto(c.profilo) : '') + '</div>' +
-        ('<h2>Ora copia la tua scheda</h2><p style="margin:0">Per ogni allenamento tocca <b>+ Esercizio</b>: scegli la macchina' + (palMacchine() ? ' (quelle di ' + esc(c.profilo.palestra) + ' sono già pronte)' : '') + ' o scrivi il nome dell\'esercizio, poi serie e ripetizioni. Il nome dell\'allenamento lo cambi toccandolo. Quando hai finito premi <b>Usa questa scheda</b>.</p>') + '</section>' : '')
+        (c.letta ? '<h2>Ecco la tua scheda</h2><p style="margin:0">Controllala con il foglio accanto. ' + (c.letta.controlla ? 'Gli esercizi con <span class="chk">la scritta in arancio</span> sono da verificare: toccali e scegli la macchina giusta. ' : '') + 'Tocca un esercizio per correggere serie, ripetizioni o macchina. Quando ti va bene premi <b>Usa questa scheda</b>.</p>'
+        : '<h2>Ora copia la tua scheda</h2><p style="margin:0">Per ogni allenamento tocca <b>+ Esercizio</b>: scegli la macchina' + (palMacchine() ? ' (quelle di ' + esc(c.profilo.palestra) + ' sono già pronte)' : '') + ' o scrivi il nome dell\'esercizio, poi serie e ripetizioni. Il nome dell\'allenamento lo cambi toccandolo. Quando hai finito premi <b>Usa questa scheda</b>.</p>') + '</section>' : '')
     : '<div class="top"><button type="button" class="back" data-act="list">‹ Clienti</button><button type="button" class="ghost small" data-act="dup">Duplica</button></div>';
   h += '<div class="card"><label class="f">' + (SOLO ? 'Il tuo nome' : 'Nome del cliente') + '<input data-k="cliente" value="' + esc(c.cliente) + '" placeholder="Es. Marco" autocomplete="off"></label>' +
     '<div class="two"><label class="f">Allenamenti a settimana<input data-k="obiettivo" type="number" inputmode="numeric" min="1" max="7" value="' + esc(c.obiettivo) + '"></label>' +
@@ -650,7 +654,7 @@ $('dlg').addEventListener('close', () => { $('sheet').onclick = $('sheet').oncha
 // la scheda va direttamente nell'app (stessa memoria del telefono), come se fosse arrivata con il link del coach
 function usaScheda(c){
   if (!c.giorni.some(g => VV.some(v => (g[v] || []).length))) { toast('Aggiungi almeno un esercizio'); return; }
-  c.data = iso(new Date()); delete c.nuova; save();
+  c.data = iso(new Date()); delete c.nuova; delete c.letta; save();
   const s = clean(c); s.solo = 1; if (c.profilo && c.profilo.palestra) s.palestra = c.profilo.palestra;
   try { localStorage.setItem('scheda-pt-scheda-v1', JSON.stringify(s)); localStorage.setItem('scheda-pt-modo', 'solo'); }
   catch (e) { toast('Memoria del telefono piena: non sono riuscito a salvare'); return; }
@@ -661,6 +665,14 @@ const sctx = {C, M, $, esc, toast, loadCat, pool: p => { if (p) palWz = p; retur
   riconosci(cb){ ed = {picking: true, wz: cb, e: {}}; pk.step = 'r'; pk.q = ''; drawPick(); if (!$('dlg').open) $('dlg').showModal(); },
   annulla(){ if (get(cur)) { view = 'edit'; render(); scrollTo(0, 0); } },
   GRUPPI,
+  creaDaTesto(profilo, out){
+    const old = db.clienti[0];
+    out.giorni.forEach(g => g.A.forEach(e => { if (e.m && !LIB.has(e.m) && !db.cat[e.m]) { const m = pool().find(x => x.id === e.m); if (m) { M[m.id] = m; db.cat[m.id] = m; } } }));
+    const c = {id: old ? old.id : uid(), cliente: profilo.nome || '', obiettivo: profilo.volte || out.giorni.length, varC: 'Corpo libero', giorni: out.giorni, note: [], profilo, data: iso(new Date()), nuova: true,
+      letta: {controlla: out.controlla}};
+    db.clienti = [c]; save(); cur = c.id; view = 'edit'; tab = {}; render(); scrollTo(0, 0);
+    try { localStorage.removeItem('solo-pt-bozza'); } catch (e) {}
+  },
   haMacchine: p => !!p && LIB.size > 0 && p.toLowerCase() === String(C.palestra || '').toLowerCase(),
   crea(profilo){
     const old = db.clienti[0], n = Math.max(1, Math.min(6, profilo.allenamenti || 3));
