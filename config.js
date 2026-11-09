@@ -8,6 +8,7 @@
 //   indirizzo  (facoltativo) indirizzo dell'app online, es. "https://mario-pt.netlify.app/"
 //   scadenza   (facoltativa, solo per le prove) fine prova, es. "2026-11-10": dal giorno dopo la pagina Coach si blocca, i clienti no. Vuota = nessun limite
 //   assistenza (con la scadenza) numero WhatsApp di chi vende l'app, per il tasto "Attiva la versione completa"
+//   lettore    (versione da solo) indirizzo del server che legge le foto delle schede con Claude (strumenti/lettore-worker.js); vuoto = solo modalità prova
 //   gruppi     muscoli tra cui scegliere
 //   macchine   la tua libreria: id (senza spazi), nome, marca, distretto, gruppi, esecuzione (passi), consiglio, foto ("foto/nome.jpg")
 //   esempio    scheda di esempio: la vedono i clienti in "Guarda un esempio" e tu come modello
@@ -21,6 +22,7 @@ var CONFIG = {
  "whatsapp": "",
  "scadenza": "",
  "assistenza": "",
+ "lettore": "",
  "gruppi": [
   "Petto",
   "Spalle",

@@ -1,373 +1,218 @@
-// VERSIONE "DA SOLO": procedura guidata alla prima apertura e generatore della scheda.
-// La carica coach.html quando l'indirizzo è coach.html#solo (vedi solo.html). La scheda creata va nell'editor
-// della pagina Coach (modificabile) e poi, con "Usa questa scheda", nell'app (index.html), come se arrivasse da un coach.
-import {ESERCIZI, PASSI_MACCHINA, CREDITI_GIF} from './solo-dati.js';
+// VERSIONE "DA SOLO": per chi si allena senza PT ma ha già una scheda (dal PT, dalla palestra, su carta).
+// L'app non crea la scheda: te la fa seguire ogni giorno. La carica coach.html quando l'indirizzo è coach.html#solo
+// (vedi solo.html). Intro corta: nome, palestra, quanti allenamenti; poi si copia la scheda nell'editor della pagina Coach
+// e con "Usa questa scheda" va nell'app (index.html), come se arrivasse da un coach.
+// (La prima versione con il generatore di schede è nel commit 5e4a1dc: giulio ha scelto di non crearle.)
+import {ESERCIZI, CREDITI_GIF} from './solo-dati.js';
 export {CREDITI_GIF};
 
-// ---------- libreria ----------
+// ---------- libreria degli esercizi: serve per le animazioni e i passi, non per scegliere ----------
 export const LIBRERIA = ESERCIZI.trim().split('\n').map(r => {
   const f = r.split('|');
-  return {k: f[0], n: f[1], g: f[2].split(','), eq: f[3], lv: +f[4], b: +f[5], z: f[6] ? f[6].split(',') : [],
-    re: f[7] ? new RegExp(f[7].replace(/\//g, '|'), 'i') : null, c: f[8] ? f[8].split(';') : [], p: f[9] || '', x: f[10] || '', t: f[11] || '', r: f[12] || ''};
+  return {k: f[0], n: f[1], g: f[2].split(','), eq: f[3], re: f[7] ? new RegExp(f[7].replace(/\//g, '|'), 'i') : null,
+    c: f[8] ? f[8].split(';') : [], p: f[9] || '', x: f[10] || '', t: f[11] || ''};
 });
 // macchine che il nome farebbe scambiare per un altro tipo (es. "Rear Delt Fly" non è una pectoral machine)
 const NO = {c07: /rear|reverse|delt|lateral/i, c08: /inclin|declin|shoulder/i, x07: /bench|panca/i, q02: /calf/i, s02: /straight|pullover/i,
   s04: /upright|t-?bar/i, t10: /dip|push/i, b10: /leg|wrist/i, p01: /seated|sitting/i, q03: /back|lombar|tricep/i, h03: /chest/i};
-// le panche che sono "macchine" a sé: hyperextension e panca per addominali
 const PANCA_OK = new Set(['s09', 'a06']);
-
-export const ZONE = [
-  ['spalle', 'Spalle'], ['collo', 'Collo e cervicale'], ['schiena', 'Schiena bassa'],
-  ['ginocchia', 'Ginocchia'], ['anche', 'Anche'], ['polsi', 'Polsi e gomiti']
-];
-export const OBIETTIVI = [
-  ['dimagrire', 'Dimagrire', 'Perdere grasso e sentirti più leggero'],
-  ['massa', 'Massa', 'Mettere su muscoli e forza'],
-  ['tonificare', 'Tonificare', 'Rassodare e definire senza ingrossare'],
-  ['salute', 'Salute', 'Stare bene, muoverti meglio, senza fretta']
-];
-export const LIVELLI = [
-  [0, 'Mai fatto', 'Non mi sono mai allenato in sala pesi, o è passato tanto tempo'],
-  [1, 'Qualche mese', 'Conosco le macchine principali'],
-  [2, 'Più di un anno', 'Mi alleno con costanza']
-];
-
-// zone caricate da una macchina che non è in libreria, dal nome
-const ZRE = [
-  ['spalle', /shoulder|overhead|military|deltoid|lateral|\bdips?\b|fly|pec|butterfly|upright|pullover/i],
-  ['collo', /shrug|upright|neck/i],
-  ['schiena', /squat|dead|good morning|back ext|hyper|lombar|lower back|t-?bar|standing calf|belt/i],
-  ['ginocchia', /squat|leg press|leg ext|hack|lunge|pendul|step|knee ext/i],
-  ['anche', /abduct|adduct|hip|thigh/i],
-  ['polsi', /\bdips?\b|tricep|french|curl(?!.*leg)(?!.*knee)|wrist/i]
-];
-const BASE_RE = /press|row|pull|squat|hack|\bdips?\b|chin|lunge|dead|thrust|pendul|belt/i, ISO_RE = /calf|curl|fly|ext|raise|lateral|abdom|crunch|delt/i;
-const GRUPPI_OK = ['Petto', 'Spalle', 'Schiena', 'Trapezio', 'Tricipiti', 'Bicipiti', 'Quadricipiti', 'Femorali', 'Glutei', 'Adduttori', 'Lombari', 'Polpacci', 'Addominali'];
-
-// cosa abilita una macchina scelta: cavi, multipower, panche, rack
-function abilita(m, att){
-  const n = (m.nome || '') + ' ' + (m.linea || '');
-  if (m.tipo === 'cavi/multistazione' || /cable|crossover|pulley|functional|cavi/i.test(n)) att.C = 1;
-  if (/smith|multipower/i.test(n)) att.S = 1;
-  if (m.tipo === 'panca/rack') { if (/rack|cage|squat|platform/i.test(n)) att.B = 1; if (/bench|panca/i.test(n)) att.D = 1; if (/\bdips?\b|chin|pull ?up|parallel/i.test(n)) att.X = 1; }
-}
-// da una macchina scelta a un esercizio: prima la libreria (con GIF e passi), poi i muscoli del catalogo
+// animazione e passi per una macchina scelta, solo se il disegno è lo stesso tipo di macchina
 export function daMacchina(m){
   const nome = String(m.nome || '');
-  const lib = LIBRERIA.find(e => e.eq === 'M' && e.re && e.re.test(nome) && !(NO[e.k] && NO[e.k].test(nome)) && (m.tipo !== 'panca/rack' || PANCA_OK.has(e.k)));
-  if (lib) return {key: 'm:' + m.id, m: m.id, g: lib.g, b: lib.b, lv: lib.lv, z: lib.z, c: lib.c, p: lib.p, x: lib.x, t: lib.t, r: lib.r, eq: 'M', lib: lib.k, tipo: m.tipo};
-  if (m.tipo === 'panca/rack' || m.tipo === 'cavi/multistazione') return null;
-  const g = (m.gruppi || []).filter(x => GRUPPI_OK.includes(x));
-  if (!g.length) return null;
-  const z = ZRE.filter(([, re]) => re.test(nome)).map(([k]) => k);
-  if (/Quadricipiti/.test(g[0]) && !z.includes('ginocchia')) z.push('ginocchia');
-  return {key: 'm:' + m.id, m: m.id, g, b: BASE_RE.test(nome) && !ISO_RE.test(nome) ? 1 : 0, lv: 0, z, c: PASSI_MACCHINA, p: '', x: '', t: '', r: '', eq: 'M', lib: '', tipo: m.tipo};
+  return LIBRERIA.find(e => e.eq === 'M' && e.re && e.re.test(nome) && !(NO[e.k] && NO[e.k].test(nome)) && (m.tipo !== 'panca/rack' || PANCA_OK.has(e.k))) || null;
 }
+// esercizi senza macchina: nomi da suggerire mentre si scrive, e animazione se il nome coincide
+const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9àèéìòù]+/g, ' ').trim();
+export const NOMI_LIBERI = LIBRERIA.filter(e => e.eq !== 'M').map(e => e.n);
+export function daNome(n){ const k = norm(n); return k ? LIBRERIA.find(e => e.eq !== 'M' && norm(e.n) === k) || null : null; }
 
-// ---------- schemi della settimana ----------
-// [muscolo, base] in ordine di importanza: si prendono i primi che stanno nel tempo a disposizione
-const S = (s) => s.split(' ').map(x => [{Q: 'Quadricipiti', F: 'Femorali', G: 'Glutei', P: 'Petto', D: 'Schiena', S: 'Spalle', B: 'Bicipiti', T: 'Tricipiti', A: 'Addominali', C: 'Polpacci', L: 'Lombari', R: 'Trapezio'}[x[0]], +x[1]]);
-const SCHEMI = {
-  FB1: ['Total body A', S('Q1 P1 D1 S1 F0 A0 B0 T0 C0 G0')],
-  FB2: ['Total body B', S('D1 G1 P1 F0 S0 T0 B0 A0 Q0 C0')],
-  FB3: ['Total body C', S('P1 Q1 D1 S1 G0 B0 T0 A0 F0 C0')],
-  UA: ['Parte alta A', S('P1 D1 S1 P0 D1 T0 B0 S0 A0')],
-  LA: ['Gambe A', S('Q1 F0 G1 Q0 C0 A0 G0 F0')],
-  UB: ['Parte alta B', S('D1 P1 S1 D1 P0 B0 T0 S0 A0')],
-  LB: ['Gambe B', S('G1 F0 Q1 F0 G0 C0 A0 Q0')],
-  PUSH: ['Petto, spalle e tricipiti', S('P1 P1 S1 P0 S0 T0 T0 A0')],
-  PULL: ['Schiena e bicipiti', S('D1 D1 D0 L0 B0 B0 S0 A0')],
-  LEGS: ['Gambe', S('Q1 F0 Q0 G1 F0 C0 A0 G0')],
-  PT: ['Petto e tricipiti', S('P1 P1 P0 T0 T0 A0 P0')],
-  DB: ['Schiena e bicipiti', S('D1 D1 D0 B0 B0 L0 D0')],
-  GQ: ['Gambe e quadricipiti', S('Q1 Q1 Q0 F0 C0 A0 G0')],
-  SA: ['Spalle e addome', S('S1 S0 S0 R0 A0 A0 S0')],
-  GG: ['Glutei e femorali', S('G1 F0 G0 F0 Q0 C0 A0')]
-};
-function schemaSettimana(p){
-  const n = Math.max(2, Math.min(6, +p.giorni || 3));
-  if (n === 2) return ['FB1', 'FB2'];
-  if (n === 3) return p.livello >= 2 && p.obiettivo === 'massa' ? ['PUSH', 'PULL', 'LEGS'] : ['FB1', 'FB2', 'FB3'];
-  if (n === 4) return ['UA', 'LA', 'UB', 'LB'];
-  if (n === 5) return ['PT', 'DB', 'GQ', 'SA', 'GG'];
-  return ['PUSH', 'PULL', 'LEGS', 'PUSH', 'PULL', 'LEGS'];
-}
+// ---------- palestre ----------
+// catene italiane con almeno 30 sedi (Business Fit Consulting, classifiche low cost e budget/premium, dati al 31/05/2026)
+// m: marche delle macchine che usa la catena, dove c'è una fonte (2026-11-09). Vuota = non si sa: si vedono tutte le marche.
+//   Green Theory: sito della catena (Panatta, Diamond by Presti, Lacertosus). McFit: rsggroup.com (gym80). Virgin Active: Technogym (club Bocconi, rinnovo 2023).
+//   Icon: schede dei club su Fitprime (Matrix, Technogym, Sterling). Anytime Fitness: Life Fitness / Hammer Strength (Padova, partnership hub). Orange: Technogym (club di Palermo).
+export const CATENE = [
+  {n: 'FitActive', m: []}, {n: 'Fit Up', m: []}, {n: 'Up Level', m: []},
+  {n: 'Green Theory', m: ['Panatta', 'Diamond', 'Lacertosus']},
+  {n: 'Anytime Fitness', m: ['Life Fitness', 'Hammer Strength']},
+  {n: 'Icon', m: ['Matrix', 'Technogym']}, {n: 'Fit Express', m: []},
+  {n: 'McFit', m: ['gym80']}, {n: 'Orange Palestre Italiane', m: ['Technogym']}, {n: 'Virgin Active', m: ['Technogym']}
+];
+const NOMI_CATENE = CATENE.map(c => c.n);
+export const marcheDi = p => (CATENE.find(c => c.n.toLowerCase() === String(p || '').toLowerCase()) || {m: []}).m;
 
-// serie e ripetizioni secondo obiettivo e livello
-function dose(p, ex, slotBase){
-  const L = +p.livello || 0, base = ex.b && slotBase, o = p.obiettivo;
-  if (ex.r) return {s: L ? 3 : 2, r: ex.r};
-  if (ex.g[0] === 'Addominali') return {s: L ? 3 : 2, r: '15'};
-  if (ex.g[0] === 'Polpacci') return {s: 3, r: '15'};
-  if (o === 'massa') return base ? {s: L ? 4 : 3, r: L >= 2 ? '6-8' : '8-10'} : {s: 3, r: '10-12'};
-  if (o === 'dimagrire') return {s: base || L ? 3 : 2, r: base ? '12' : '15'};
-  if (o === 'salute') return {s: L ? 3 : 2, r: base ? '10-12' : '12-15'};
-  return {s: base || L ? 3 : 2, r: base ? '10-12' : '12-15'};   // tonificare
-}
-const RECUPERO = {massa: '90 secondi - 2 minuti sui primi esercizi, 60-90 secondi sugli altri', tonificare: '60-75 secondi', dimagrire: '45-60 secondi', salute: '60-90 secondi'};
-
-// ---------- generatore ----------
-// p: {nome, obiettivo, livello, giorni, minuti, macchine: [oggetti macchina], att: {D,B,C,S}, zone: []}
-export function genera(p){
-  const L = +p.livello || 0, zone = new Set(p.zone || []), att = Object.assign({D: 0, B: 0, C: 0, S: 0, X: 0}, p.att || {});
-  const lvMax = p.obiettivo === 'salute' ? Math.min(L, 1) : L;
-  (p.macchine || []).forEach(m => abilita(m, att));
-  if (att.B) att.X = 1;   // dove c'è un rack di solito ci sono anche sbarra e parallele
-  const libere = LIBRERIA.filter(e => e.eq !== 'M' && e.eq !== 'Z' && (e.eq === 'F' || att[e.eq]))
-    .map(e => ({key: 'k:' + e.k, n: e.n, g: e.g, b: e.b, lv: e.lv, z: e.z, c: e.c, p: e.p, x: e.x, t: e.t, r: e.r, eq: e.eq, lib: e.k}));
-  const macchine = [], viste = new Set();
-  (p.macchine || []).forEach(m => { const c = daMacchina(m); if (c && !viste.has(c.key)) { viste.add(c.key); macchine.push(c); } });
-  const ok = c => c.lv <= lvMax && !c.z.some(z => zone.has(z));
-  const tutti = macchine.concat(libere).filter(ok);
-  const tolti = macchine.concat(libere).filter(c => !ok(c) && c.z.some(z => zone.has(z))).length;
-
-  const uso = {A: {}, B: {}, C: {}};   // quante volte un esercizio è già nella settimana, per variante
-  const tipoUso = {};                  // stesso esercizio della libreria (es. due leg press diverse)
-  const voto = (c, slot, v, gia, giaTipo, altri, prim) => {
-    const [g, sb] = slot;
-    let s = 0;
-    if (c.g[0] === g || (g === 'Glutei' && c.g[0] === 'Adduttori')) s += 4;
-    else if (sb && c.b && c.g.includes(g) && !prim.has(c.g[0])) s += 1.2;
-    else return -99;
-    if (c.b === sb) s += 2; else if (sb && !c.b) s -= 1.5;
-    if (c.eq === 'M') s += v === 'A' ? 2.5 : v === 'B' ? 1.2 : 0;
-    if (c.eq === 'M' && c.x) s += .3;
-    if (L === 0 && (c.eq === 'B' || c.eq === 'X')) s -= 1.5;
-    if (L === 0 && c.eq === 'M' && c.tipo === 'a dischi') s -= .5;
-    if (p.obiettivo === 'salute' && c.eq === 'M') s += .8;
-    if (L >= 2 && c.lv === 2) s += .4;
-    s -= 3 * (uso[v][c.key] || 0) + 1.2 * (tipoUso[v + c.lib] || 0);
-    if (altri.some(a => a.key === c.key)) s -= 6;
-    if (altri.some(a => a.lib && a.lib === c.lib)) s -= 2.5;
-    if (gia.has(c.key) || (c.m && giaTipo.has('m:' + c.m))) return -99;
-    return s;
-  };
-  const scegli = (pool, slot, v, gia, giaTipo, altri, prim) => {
-    let best = null, bv = -50;
-    pool.forEach(c => { const x = voto(c, slot, v, gia, giaTipo, altri, prim); if (x > bv) { bv = x; best = c; } });
-    return best;
-  };
-
-  // tempo: riscaldamento 8 minuti (e cardio finale per chi vuole dimagrire), ogni serie con recupero circa 2,3 minuti
-  const min = Math.max(20, Math.min(120, +p.minuti || 60));
-  const cardio = p.obiettivo === 'dimagrire' ? (min >= 60 ? 15 : min >= 45 ? 10 : 0) : 0;
-  const budget = min - 8 - cardio;
-  const nomi = {}, giorni = [];
-  schemaSettimana(p).forEach((sk, di) => {
-    const [nome0, slots] = SCHEMI[sk];
-    nomi[nome0] = (nomi[nome0] || 0) + 1;
-    const nome = nomi[nome0] > 1 ? nome0 + ' 2' : nome0;
-    const day = {id: 'g' + (di + 1), nome, nota: '', A: [], B: [], C: []};
-    const gia = {A: new Set(), B: new Set(), C: new Set()}, tipo = {A: new Set(), B: new Set(), C: new Set()}, prim = {A: new Set(), B: new Set(), C: new Set()};
-    let tempo = 0;
-    for (const slot of slots) {
-      if (day.A.length >= 10) break;
-      const a = scegli(tutti, slot, 'A', gia.A, tipo.A, [], prim.A);
-      if (!a) continue;
-      const d = dose(p, a, slot[1]), costo = d.s * 2.3 + 1;
-      if (day.A.length >= 3 && tempo + costo > budget) break;
-      tempo += costo;
-      const b = scegli(tutti, slot, 'B', gia.B, tipo.B, [a], prim.B) || a;
-      const c = scegli(tutti.filter(x => x.eq === 'F' || x.eq === 'D'), slot, 'C', gia.C, tipo.C, [a, b], prim.C);
-      [['A', a], ['B', b], ['C', c]].forEach(([v, x]) => {
-        if (!x) return;
-        gia[v].add(x.key); prim[v].add(x.g[0]); if (x.m) tipo[v].add('m:' + x.m);
-        uso[v][x.key] = (uso[v][x.key] || 0) + 1; tipoUso[v + x.lib] = (tipoUso[v + x.lib] || 0) + 1;
-        day[v].push(voce(x, dose(p, x, slot[1])));
-      });
-    }
-    // la variante C serve solo se ha almeno metà degli esercizi
-    if (day.C.length < Math.max(2, Math.ceil(day.A.length / 2))) day.C = [];
-    if (JSON.stringify(day.B) === JSON.stringify(day.A)) day.B = [];
-    day.nota = 'Riscaldamento 5-8 minuti. Recupero ' + RECUPERO[p.obiettivo || 'tonificare'] + ' tra le serie.' + (cardio ? ' Alla fine ' + cardio + ' minuti di cardio a ritmo sostenuto.' : '');
-    if (day.A.length) giorni.push(day);
+// ---------- lettura della scheda da foto (Claude) ----------
+// Con "lettore" in config.js le foto vanno al tuo server (strumenti/lettore-worker.js, che tiene la chiave API);
+// senza, per le prove, si può usare una chiave API salvata solo su questo telefono.
+export const MODELLO = 'claude-sonnet-5-5';
+function jpeg(file, max){
+  return new Promise((ok, ko) => {
+    const u = URL.createObjectURL(file), im = new Image();
+    im.onload = () => {
+      const k = Math.min(1, max / Math.max(im.naturalWidth, im.naturalHeight)), cv = document.createElement('canvas');
+      cv.width = Math.round(im.naturalWidth * k); cv.height = Math.round(im.naturalHeight * k);
+      cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height); URL.revokeObjectURL(u);
+      ok(cv.toDataURL('image/jpeg', .85).split(',')[1]);
+    };
+    im.onerror = () => { URL.revokeObjectURL(u); ko(new Error('foto non leggibile')); };
+    im.src = u;
   });
-  return {giorni, tolti, varC: att.D ? 'Pesi liberi' : 'Corpo libero', note: note(p, zone, cardio, att.D ? 'Pesi liberi' : 'Corpo libero')};
 }
-function voce(x, d){
-  const e = {s: d.s, r: d.r, g: x.g.filter(g => g !== 'Adduttori').slice(0, 3)};
-  if (!e.g.length) e.g = ['Glutei'];
-  if (x.m) e.m = x.m; else e.n = x.n;
-  if (x.p) e.p = x.p;
-  if (x.c && x.c.length) e.c = x.c.slice();
-  if (x.x) e.x = x.x;
-  if (x.t) e.xt = x.t;
+const PROMPT = () => 'Queste foto sono la scheda di allenamento di una persona (scritta a mano o stampata, anche su più pagine). Trascrivila fedelmente: non inventare e non aggiungere esercizi. ' +
+  'Rispondi SOLO con un JSON, senza altro testo:\n' +
+  '{"giorni":[{"nome":"nome dell\'allenamento come scritto (es. Giorno A, Petto e tricipiti)","esercizi":[{"nome":"nome dell\'esercizio come scritto, sistemato in italiano leggibile",' +
+  '"attrezzo":"macchina|manubri|bilanciere|cavi|corpo libero|altro","tipo_en":"solo per le macchine: il tipo di macchina in inglese come lo scrivono i produttori (es. leg press, seated leg curl, lying leg curl, lat pulldown, chest press, pectoral, shoulder press, low row, leg extension, abductor, adductor, calf), altrimenti null",' +
+  '"marca":"marca o modello se scritti, altrimenti null","serie":numero o null,"ripetizioni":"come scritte (es. 10, 8-10, 12/10/8, 30 sec) o null","recupero":"es. 90 sec, o null","note":"indicazioni scritte per l\'esercizio, o null",' +
+  '"libreria":"il nome esatto dalla lista qui sotto se è lo stesso esercizio, altrimenti null"}]}],' +
+  '"volte":numero di allenamenti a settimana se scritto, altrimenti null,"note":["indicazioni generali scritte sulla scheda"],"dubbi":["parole o numeri che non sei riuscito a leggere bene, con la tua ipotesi"]}\n' +
+  'Se gli esercizi non sono divisi in giorni, metti un solo giorno. Superserie e circuiti: un esercizio per riga, con "superserie con ..." nelle note.\n\nLista esercizi:\n' +
+  LIBRERIA.map(e => e.n).join('; ');
+export async function leggiScheda(files, {url, chiave}){
+  const imgs = [];
+  for (const f of files.slice(0, 4)) imgs.push(await jpeg(f, 1600));
+  const messages = [{role: 'user', content: imgs.map(d => ({type: 'image', source: {type: 'base64', media_type: 'image/jpeg', data: d}})).concat({type: 'text', text: PROMPT()})}];
+  let r;
+  if (url) r = await fetch(url, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({messages})});
+  else if (chiave) r = await fetch('https://api.anthropic.com/v1/messages', {method: 'POST',
+    headers: {'content-type': 'application/json', 'x-api-key': chiave, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true'},
+    body: JSON.stringify({model: MODELLO, max_tokens: 6000, messages})});
+  else throw new Error('la lettura delle foto non è ancora attiva');
+  if (!r.ok) throw new Error('il lettore ha risposto ' + r.status + (r.status === 401 ? ' (chiave non valida)' : r.status === 429 ? ' (troppe richieste, riprova tra poco)' : ''));
+  const t = ((await r.json()).content || []).map(b => b.text || '').join('');
+  const j = t.match(/\{[\s\S]*\}/); if (!j) throw new Error('risposta non leggibile');
+  const o = JSON.parse(j[0]);
+  if (!o || !Array.isArray(o.giorni) || !o.giorni.some(g => (g.esercizi || []).length)) throw new Error('nella foto non ho trovato esercizi');
+  return o;
+}
+// dalla scheda letta agli esercizi dell'editor: macchina del catalogo (marche della palestra prima), o esercizio libero con animazione
+export function trasforma(o, pool, palestra, gruppiOk){
+  const marche = marcheDi(palestra).map(x => x.toLowerCase());
+  const giorni = o.giorni.filter(g => (g.esercizi || []).length).slice(0, 6).map((g, gi) => ({
+    id: 'g' + (gi + 1), nome: String(g.nome || 'Allenamento ' + String.fromCharCode(65 + gi)).slice(0, 40), nota: '', B: [], C: [],
+    A: g.esercizi.slice(0, 15).map(x => esercizio(x, pool, marche, gruppiOk))
+  }));
+  return {giorni, volte: +o.volte || 0, note: (o.note || []).filter(Boolean).map(String), dubbi: (o.dubbi || []).filter(Boolean).map(String),
+    controlla: giorni.reduce((n, g) => n + g.A.filter(e => e.chk).length, 0)};
+}
+function esercizio(x, pool, marche, gruppiOk){
+  const e = {s: Math.max(1, Math.min(12, Math.round(+x.serie) || 3)), r: String(x.ripetizioni || '10').slice(0, 20)};
+  const p = [x.note, x.recupero ? 'Recupero ' + x.recupero : ''].filter(Boolean).join(' · '); if (p) e.p = p;
+  const lib = x.libreria ? daNome(x.libreria) : null;
+  if (x.attrezzo === 'macchina' && !lib) {
+    const t = trovaMacchina(x.tipo_en || x.nome, x.marca, pool, marche);
+    if (t) {
+      e.m = t.m.id; if (t.dubbio) e.chk = 1;
+      e.g = (t.m.gruppi || []).filter(g => gruppiOk.includes(g));
+      const d = daMacchina(t.m); if (d && d.x) { e.x = d.x; if (d.t) e.xt = d.t; }
+      if (x.nome) e.p = [e.p, 'Sulla scheda: ' + x.nome].filter(Boolean).join(' · ');
+      return e;
+    }
+  }
+  e.n = String(x.nome || (lib && lib.n) || 'Esercizio').slice(0, 80);
+  if (x.attrezzo === 'macchina' && !lib) e.chk = 1;   // macchina non trovata nel catalogo: da scegliere a mano
+  if (lib) { if (lib.x) { e.x = lib.x; if (lib.t) e.xt = lib.t; } if (lib.c.length) e.c = lib.c.slice(); e.g = lib.g.filter(g => gruppiOk.includes(g)); if (!e.p && lib.p) e.p = lib.p; }
   return e;
 }
-function note(p, zone, cardio, varC){
-  const n = [];
-  const L = +p.livello || 0;
-  n.push(L === 0 ? 'Le prime 2 settimane usa pesi leggeri: impara il movimento prima di caricare.' : 'Quando fai tutte le ripetizioni con facilità per due allenamenti di fila, aumenta un po\' il peso.');
-  if (p.obiettivo === 'dimagrire') n.push('Per dimagrire conta molto anche cosa mangi e quanto ti muovi fuori dalla palestra: cammina tutti i giorni.' + (cardio ? '' : ' Se hai tempo, aggiungi 10-15 minuti di cardio alla fine.'));
-  if (p.obiettivo === 'massa') n.push('Per crescere servono abbastanza proteine e sonno: il muscolo cresce mentre recuperi.');
-  if (p.obiettivo === 'salute') n.push('Muoviti con calma e senza dolore: la costanza conta più del peso.');
-  n.push('Alterna le varianti A e B: stessi muscoli, macchine diverse. La variante "' + varC + '" è per quando le macchine sono occupate.');
-  if (zone.size) n.push('Hai indicato fastidi a: ' + ZONE.filter(([k]) => zone.has(k)).map(([, l]) => l.toLowerCase()).join(', ') + '. Ho tolto gli esercizi che caricano di più queste zone. Se senti dolore (non fatica) fermati, e se il fastidio dura parlane con un medico o un fisioterapista.');
-  else n.push('Se senti dolore (non fatica) durante un esercizio, fermati e cambialo.');
-  return n;
+const STOP = new Set(['machine', 'macchina', 'the', 'di', 'a', 'al', 'alla', 'con']);
+function trovaMacchina(tipo, marca, pool, marche){
+  const w = norm(tipo).split(' ').filter(x => x.length > 1 && !STOP.has(x));
+  if (!w.length) return null;
+  const mk = norm(marca);
+  let c = pool.filter(m => { const n = norm(m.nome + ' ' + (m.linea || '')); return w.every(x => n.includes(x)); });
+  if (!c.length) return null;
+  const voto = m => (m.lib ? 4 : 0) + (mk && norm(m.marca).split(' ').some(x => x && mk.includes(x)) ? 3 : 0) + (marche.includes(String(m.marca || '').toLowerCase()) ? 2 : 0) - (m.stato ? 1 : 0) - norm(m.nome).split(' ').length * .1 - (/inclin|declin/.test(norm(m.nome)) && !/inclin|declin/.test(norm(tipo)) ? 1.2 : 0);
+  c = c.map(m => ({m, v: voto(m)})).sort((a, b) => b.v - a.v);
+  // sicura solo se è l'unica di quel tipo tra le macchine più probabili (prima quelle della palestra, poi le marche della catena)
+  const top = c[0], pari = c.filter(x => x.v >= top.v - 1).length;
+  return {m: top.m, dubbio: pari > 1};
 }
 
-// ---------- procedura guidata ----------
-// ctx dalla pagina Coach: {C, $, esc, toast, loadCat, pool, macroOf, rankOf, MACRO, riconosci(cb), crea(profilo, risultato, macchine), annulla}
-const wz = {step: 0, p: null, brand: '', gr: '', q: '', tutte: false, ritorno: false};
-const P0 = () => ({nome: '', obiettivo: '', livello: null, giorni: 3, minuti: 60, macchine: [], att: {D: 1, B: 1, C: 1, S: 0}, zone: []});
+// ---------- intro ----------
+// ctx dalla pagina Coach: {C, $, esc, toast, crea(profilo), annulla}
+const wz = {step: 0, p: null, ritorno: false, foto: [], stato: '', errore: ''};
+const P0 = () => ({nome: '', palestra: '', citta: '', allenamenti: 3, volte: 3});
 export function avvia(profilo, ritorno){
   wz.p = Object.assign(P0(), profilo ? JSON.parse(JSON.stringify(profilo)) : {});
-  wz.step = profilo ? 1 : 0; wz.brand = ''; wz.q = ''; wz.ritorno = !!ritorno;
+  wz.step = 0; wz.ritorno = !!ritorno; wz.foto = []; wz.stato = ''; wz.errore = '';
 }
-const PASSI = 5;
 export function render(ctx){
   const {$, esc} = ctx, p = wz.p || (avvia(), wz.p);
-  const sel = new Set(p.macchine);
-  const bar = n => '<div class="wzbar" aria-label="Passo ' + n + ' di ' + PASSI + '">' + Array.from({length: PASSI}, (_, i) => '<span' + (i < n ? ' class="on"' : '') + '></span>').join('') + '</div>';
-  const scelta = (key, val, lab, sub, on) => '<button type="button" class="wzopt" data-w="' + key + '" data-val="' + esc(val) + '" aria-pressed="' + !!on + '"><b>' + esc(lab) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</button>';
+  const chip = (key, val, lab, on) => '<button type="button" class="wzopt" data-w="' + key + '" data-val="' + esc(val) + '" aria-pressed="' + !!on + '"><b>' + esc(lab) + '</b></button>';
   let h = '', foot = '';
-  const avanti = (ok, lab) => '<button type="button" class="primary" data-w="next"' + (ok ? '' : ' disabled') + '>' + (lab || 'Avanti') + '</button>';
   if (wz.step === 0) {
+    const altra = p.palestra && !NOMI_CATENE.includes(p.palestra);
     const ios = /iPhone|iPad/.test(navigator.userAgent) && !navigator.standalone;
-    h = '<section class="wzhero"><div class="eyebrow">' + esc(ctx.C.palestra ? 'Ti alleni da solo · ' + ctx.C.palestra : 'Ti alleni da solo') + '</div><h2>Creiamo la tua scheda</h2>' +
-      '<p>Cinque domande semplici, due minuti. Alla fine trovi la scheda pronta: esercizi, serie, ripetizioni e come si fanno. Puoi cambiarla quando vuoi.</p></section>' +
-      '<div class="card"><label class="f">Come ti chiami? (facoltativo)<input id="wzNome" value="' + esc(p.nome) + '" placeholder="Es. Marco" autocomplete="given-name"></label></div>' +
-      (ios ? '<p class="hint">Consiglio: prima aggiungi l\'app alla schermata Home (Condividi, poi "Aggiungi alla schermata Home") e fai la procedura da lì, così la scheda resta nell\'app.</p>' : '');
-    foot = '<button type="button" class="primary" data-w="next">Iniziamo</button>';
+    h = '<section class="wzhero"><div class="eyebrow">Ti alleni da solo</div><h2>La tua scheda, facile ogni giorno</h2>' +
+      '<p>Copia qui la scheda che hai già. L\'app ti dice cosa fare oggi, ti mostra macchine e movimenti e si ricorda i tuoi pesi. Anche senza internet.</p></section>' +
+      '<div class="card"><label class="f">Come ti chiami?<input id="wzNome" value="' + esc(p.nome) + '" placeholder="Es. Marco" autocomplete="given-name"></label>' +
+      '<div class="eyebrow">Dove ti alleni?</div><div class="wzchips wzwrap">' + NOMI_CATENE.map(c => chip('palestra', c, c, p.palestra === c)).join('') + chip('altra', '1', 'Un\'altra palestra', altra) + '</div>' +
+      (altra || wz.altra ? '<label class="f">Nome della palestra<input id="wzPal" value="' + esc(altra ? p.palestra : '') + '" placeholder="Es. Palestra Olimpia" autocomplete="off"></label>' : '') +
+      '</div>' +
+      (ios ? '<p class="hint">Su iPhone: prima aggiungi l\'app alla schermata Home (Condividi, poi "Aggiungi alla schermata Home") e continua da lì, così la scheda resta nell\'app.</p>' : '');
+    foot = wz.ritorno ? '<button type="button" class="primary" data-w="crea">Salva</button>' : '<button type="button" class="primary" data-w="next">Avanti</button>';
   } else if (wz.step === 1) {
-    h = bar(1) + '<h2>Qual è il tuo obiettivo?</h2><div class="wzlist">' + OBIETTIVI.map(([k, l, s]) => scelta('obiettivo', k, l, s, p.obiettivo === k)).join('') + '</div>';
-    foot = avanti(!!p.obiettivo);
-  } else if (wz.step === 2) {
-    h = bar(2) + '<h2>Quanta esperienza hai?</h2><div class="wzlist">' + LIVELLI.map(([k, l, s]) => scelta('livello', k, l, s, p.livello === k)).join('') + '</div>';
-    foot = avanti(p.livello !== null && p.livello !== undefined);
-  } else if (wz.step === 3) {
-    h = bar(3) + '<h2>Quanto tempo hai?</h2>' +
-      '<div class="card"><div class="eyebrow">Giorni a settimana</div><div class="wzchips">' + [2, 3, 4, 5, 6].map(n => scelta('giorni', n, String(n), '', p.giorni === n)).join('') + '</div>' +
-      '<div class="eyebrow">Minuti per allenamento</div><div class="wzchips">' + [30, 45, 60, 75, 90].map(n => scelta('minuti', n, String(n), '', p.minuti === n)).join('') + '</div>' +
-      '<p class="hint">' + esc(riassuntoTempo(p)) + '</p></div>';
-    foot = avanti(true);
-  } else if (wz.step === 4) {
-    h = bar(4) + renderPalestra(ctx, p, sel);
-    foot = avanti(true, sel.size ? 'Avanti con ' + sel.size + (sel.size === 1 ? ' macchina' : ' macchine') : 'Avanti senza macchine');
-  } else if (wz.step === 5) {
-    h = bar(5) + '<h2>Hai fastidi o zone da evitare?</h2><p class="hint">Tocca tutte quelle che ti danno noia. Toglierò gli esercizi che le caricano di più.</p>' +
-      '<div class="wzchips wzwrap">' + ZONE.map(([k, l]) => scelta('zona', k, l, '', p.zone.includes(k))).join('') + '</div>' +
-      scelta('nozone', '1', 'Nessun fastidio', '', !p.zone.length) +
-      '<p class="hint">Non è un parere medico: se hai un dolore che dura, o un infortunio recente, senti prima un medico o un fisioterapista.</p>';
-    foot = '<button type="button" class="primary" data-w="crea">Crea la mia scheda</button>';
+    const prova = !ctx.lettore();
+    h = '<h2>Carica la tua scheda</h2><p class="hint" style="margin:0">Fotografala con tutte le pagine: la leggo io e la trasformo. Dopo controlli e correggi quello che serve.</p>' +
+      '<input type="file" id="wzFoto" accept="image/*" multiple hidden>' +
+      (wz.foto.length ? '<div class="wzfoto">' + wz.foto.map((f, i) => '<span><img src="' + f.u + '" alt="Pagina ' + (i + 1) + '"><button type="button" data-w="togfoto" data-val="' + i + '" aria-label="Togli">×</button></span>').join('') + '</div>' : '') +
+      (wz.stato === 'leggo' ? '<div class="card wzread"><b>Sto leggendo la scheda…</b><span class="hint">Di solito ci vogliono 20-40 secondi. Serve internet.</span></div>'
+        : '<button type="button" class="' + (wz.foto.length ? 'ghost' : 'primary') + '" data-w="foto">' + (wz.foto.length ? '+ Un\'altra pagina' : 'Fotografa la scheda') + '</button>') +
+      (wz.errore ? '<div class="card"><b>Non sono riuscito a leggerla</b><p class="hint" style="margin:0">' + esc(wz.errore) + '. Riprova con una foto più dritta e luminosa, oppure scrivila a mano.</p></div>' : '') +
+      (prova ? '<details class="card"' + (ctx.chiave() ? '' : ' open') + '><summary><b>Lettura delle foto: modalità prova</b></summary><p class="hint">Il server che legge le foto non è ancora collegato (campo "lettore" in config.js). Per provarla adesso inserisci una chiave API di Anthropic: resta solo su questo telefono.</p>' +
+        '<label class="f">Chiave API<input id="wzKey" type="password" autocomplete="off" placeholder="sk-ant-…" value="' + esc(ctx.chiave()) + '"></label></details>' : '') +
+      '<button type="button" class="linkbtn wzmano" data-w="mano">Preferisci scriverla a mano?</button>';
+    foot = wz.foto.length && wz.stato !== 'leggo' ? '<button type="button" class="primary" data-w="leggi">Leggi la scheda (' + wz.foto.length + (wz.foto.length === 1 ? ' foto' : ' foto') + ')</button>' : '';
+  } else {
+    h = '<h2>Com\'è la tua scheda?</h2>' +
+      '<div class="card"><div class="eyebrow">Quanti allenamenti diversi ha</div><p class="hint" style="margin:0">Es. "giorno A, B e C" sono 3. Una scheda total body uguale tutti i giorni è 1.</p>' +
+      '<div class="wzchips">' + [1, 2, 3, 4, 5].map(n => chip('allenamenti', n, String(n), p.allenamenti === n)).join('') + '</div>' +
+      '<div class="eyebrow">Quante volte ti alleni a settimana</div><div class="wzchips">' + [2, 3, 4, 5, 6].map(n => chip('volte', n, String(n), p.volte === n)).join('') + '</div></div>' +
+      '<p class="hint">Dopo copi gli esercizi: per ognuno la macchina (' + (ctx.haMacchine(p.palestra) ? 'quelle di ' + esc(p.palestra) + ' sono già pronte' : 'la cerchi per nome o la fotografi') + '), le serie e le ripetizioni.</p>';
+    foot = '<button type="button" class="primary" data-w="crea">Scrivi la scheda</button>';
   }
-  if (wz.step > 0) h = '<div class="top"><button type="button" class="back" data-w="prev">‹ Indietro</button>' + (wz.ritorno ? '<button type="button" class="ghost small" data-w="esci">Annulla</button>' : '') + '</div>' + h;
+  if (wz.step > 0 || wz.ritorno) h = '<div class="top">' + (wz.step > 0 ? '<button type="button" class="back" data-w="prev">‹ Indietro</button>' : '<span></span>') + (wz.ritorno ? '<button type="button" class="ghost small" data-w="esci">Annulla</button>' : '') + '</div>' + h;
   $('v').innerHTML = '<div class="wz">' + h + '</div>';
-  $('foot').hidden = false; $('footIn').innerHTML = foot;
+  $('foot').hidden = !foot; $('footIn').innerHTML = foot;
+  const fi = $('wzFoto');
+  if (fi) fi.onchange = () => { Array.from(fi.files || []).forEach(f => { if (wz.foto.length < 4) wz.foto.push({f, u: URL.createObjectURL(f)}); }); wz.errore = ''; render(ctx); };
 }
-function riassuntoTempo(p){
-  const n = schemaSettimana(p).map(k => SCHEMI[k][0]);
-  const uniq = n.filter((x, i) => n.indexOf(x) === i);
-  return p.giorni + ' allenamenti diversi a settimana: ' + uniq.join(', ').toLowerCase() + '.' + (p.minuti <= 30 ? ' Con 30 minuti faremo pochi esercizi ben scelti.' : '');
-}
-
-// passo 4: macchine della palestra, dalla lista con le foto o fotografandole
-let CATL = null;
-function renderPalestra(ctx, p, sel){
-  const {esc} = ctx;
-  if (!CATL) ctx.loadCat().then(c => { CATL = c || []; if (wz.step === 4) render(ctx); });
-  const pool = ctx.pool(), by = {};
-  pool.forEach(m => by[m.id] = m);
-  const lib = pool.filter(m => m.lib);
-  let h = '<h2>Dove ti alleni?</h2><p class="hint">Segna le macchine che ci sono nella tua palestra: la scheda userà quelle. Non serve segnarle tutte, ne bastano una decina.</p>' +
-    '<button type="button" class="ghost" data-w="foto">Fotografale</button>';
-  // marche
-  const marche = {};
-  pool.forEach(m => { if (m.lib) return; marche[m.marca] = (marche[m.marca] || 0) + 1; });
-  const LIBN = ctx.C.palestra || 'La tua palestra';
-  h += '<div class="card"><div class="eyebrow">Oppure scegli dalla lista: che marca sono?</div>' +
-    '<label class="f"><input id="wzQ" type="search" value="' + esc(wz.q) + '" placeholder="Cerca per nome: leg press, chest press…" autocomplete="off"></label>' +
-    '<div class="wzchips wzwrap">' + (lib.length ? '<button type="button" class="wzopt" data-w="brand" data-val="__lib" aria-pressed="' + (wz.brand === '__lib') + '"><b>' + esc(LIBN) + '</b></button>' : '') +
-    Object.keys(marche).sort().map(b => '<button type="button" class="wzopt" data-w="brand" data-val="' + esc(b) + '" aria-pressed="' + (wz.brand === b) + '"><b>' + esc(b) + '</b></button>').join('') + '</div>' +
-    (CATL === null ? '<p class="hint">Carico il catalogo delle macchine… (serve internet)</p>' : !CATL.length ? '<p class="hint">Non riesco a scaricare il catalogo: controlla la connessione. Puoi andare avanti anche senza macchine, userò manubri, bilanciere e corpo libero.</p>' : '') +
-    '<div id="wzList">' + listaMacchine(ctx, pool, sel) + '</div></div>';
-  // scelte
-  const scelte = p.macchine.map(id => by[id] || ctx.M[id]).filter(Boolean);
-  h += '<div class="card"><div class="eyebrow">Le tue macchine · ' + scelte.length + '</div>' +
-    (scelte.length ? '<ul class="wzsel">' + scelte.map(m => '<li><span>' + esc(m.nome) + '<small>' + esc(m.lib ? LIBN : m.marca) + '</small></span><button type="button" class="ghost small" data-w="tog" data-val="' + esc(m.id) + '" aria-label="Togli">Togli</button></li>').join('') + '</ul>'
-      : '<p class="hint">Ancora nessuna.</p>') + '</div>';
-  h += '<div class="card"><div class="eyebrow">Nella tua palestra ci sono anche</div>' +
-    [['D', 'Manubri e panche'], ['B', 'Bilanciere, rack e sbarra'], ['C', 'Cavi (pulley, croci ai cavi)'], ['S', 'Multipower']].map(([k, l]) => '<label class="wzchk"><input type="checkbox" data-att="' + k + '"' + (p.att[k] ? ' checked' : '') + '> ' + l + '</label>').join('') + '</div>';
-  return h;
-}
-function listaMacchine(ctx, pool, sel){
-  const {esc} = ctx;
-  let list;
-  if (wz.q.trim()) {
-    const w = wz.q.toLowerCase().split(/\s+/).filter(Boolean);
-    list = pool.filter(m => w.every(x => (m.nome + ' ' + (m.linea || '') + ' ' + (m.marca || '')).toLowerCase().includes(x))).slice(0, 60);
-  } else if (wz.brand) {
-    list = pool.filter(m => wz.brand === '__lib' ? m.lib : !m.lib && m.marca === wz.brand);
-  } else return '';
-  if (!list.length) return '<p class="hint">Nessuna macchina trovata.</p>';
-  // per gruppo muscolare, prima le più usate
-  const gruppi = {};
-  list.forEach(m => { const g = ctx.macroOf(m) || 'Altro'; (gruppi[g] = gruppi[g] || []).push(Object.assign({}, m, {rk: ctx.rankOf(m, g)})); });
-  const ordine = ctx.MACRO.map(o => o.n).concat('Altro').filter(g => (gruppi[g] || []).length);
-  const ord = l => l.sort((a, b) => a.rk - b.rk || (a.stato ? 1 : 0) - (b.stato ? 1 : 0) || a.nome.localeCompare(b.nome));
-  // con una ricerca si vede tutto; con una marca si sceglie un gruppo di muscoli alla volta, così la lista resta corta
-  if (wz.q.trim()) return ordine.map(g => '<div class="eyebrow wzg">' + esc(g) + '</div><div class="wzgrid">' + ord(gruppi[g]).map(m => tile(ctx, m, sel.has(m.id))).join('') + '</div>').join('');
-  if (!ordine.includes(wz.gr)) wz.gr = ordine[0];
-  const quante = g => gruppi[g].filter(m => sel.has(m.id)).length;
-  let h = '<div class="wzchips wzwrap wztabs">' + ordine.map(g => '<button type="button" class="wzopt" data-w="gr" data-val="' + esc(g) + '" aria-pressed="' + (g === wz.gr) + '"><b>' + esc(g) + (quante(g) ? ' · ' + quante(g) : '') + '</b></button>').join('') + '</div>';
-  const l = ord(gruppi[wz.gr]);
-  const vis = wz.tutte || wz.brand === '__lib' ? l : l.filter(m => (m.rk < 99 && !m.stato) || sel.has(m.id));
-  const nasc = l.length - vis.length;
-  h += vis.length ? '<div class="wzgrid">' + vis.map(m => tile(ctx, m, sel.has(m.id))).join('') + '</div>' : '<p class="hint">Nessuna tra le più usate.</p>';
-  if (nasc) h += '<button type="button" class="ghost small" data-w="tutte">Mostra anche le altre ' + nasc + ' (meno comuni o fuori produzione)</button>';
-  return h;
-}
-const tile = (ctx, m, on) => '<button type="button" class="wzt" data-w="tog" data-val="' + ctx.esc(m.id) + '" aria-pressed="' + on + '">' +
-  (m.foto ? '<img src="' + ctx.esc(m.foto) + (m.lib ? '' : '?c') + '" alt="" loading="lazy">' : '<span class="noimg"></span>') +
-  '<span>' + ctx.esc(m.nome) + (m.stato ? '<small>' + ctx.esc(m.stato) + '</small>' : '') + '</span></button>';
-
-// eventi della procedura (li chiama la pagina Coach)
 export function click(ctx, t){
   const p = wz.p, w = t.dataset.w, val = t.dataset.val;
-  const nome = ctx.$('wzNome'); if (nome) p.nome = nome.value.trim();
-  if (w === 'next') { if (wz.step < PASSI) { wz.step++; render(ctx); scrollTo(0, 0); } return true; }
-  if (w === 'prev') { if (wz.step > 0) { wz.step--; render(ctx); scrollTo(0, 0); } return true; }
-  if (w === 'esci') { ctx.annulla(); return true; }
-  if (w === 'obiettivo') { p.obiettivo = val; wz.step = 2; render(ctx); scrollTo(0, 0); return true; }
-  if (w === 'livello') { p.livello = +val; wz.step = 3; render(ctx); scrollTo(0, 0); return true; }
-  if (w === 'giorni' || w === 'minuti') { p[w] = +val; render(ctx); return true; }
-  if (w === 'zona') { const i = p.zone.indexOf(val); if (i < 0) p.zone.push(val); else p.zone.splice(i, 1); render(ctx); return true; }
-  if (w === 'nozone') { p.zone = []; render(ctx); return true; }
-  if (w === 'brand') { wz.brand = wz.brand === val ? '' : val; wz.q = ''; wz.tutte = false; render(ctx); const l = ctx.$('wzList'); if (l && wz.brand) l.scrollIntoView({block: 'start', behavior: 'smooth'}); return true; }
-  if (w === 'tutte') { wz.tutte = true; redrawList(ctx); return true; }
-  if (w === 'gr') { wz.gr = val; wz.tutte = false; redrawList(ctx); return true; }
-  if (w === 'tog') { toggle(ctx, val); return true; }
-  if (w === 'foto') {
-    ctx.riconosci(m => { if (!p.macchine.includes(m.id)) p.macchine.push(m.id); ctx.toast('Aggiunta: ' + m.nome + ' · scatta la prossima'); });
-    return true;
+  leggi(ctx);
+  if (w === 'next') {
+    if (!p.palestra) { ctx.toast('Scegli la tua palestra'); return true; }
+    wz.step = 1; render(ctx); scrollTo(0, 0); return true;
   }
-  if (w === 'crea') { crea(ctx); return true; }
+  if (w === 'prev') { wz.step = wz.step === 2 ? 1 : 0; render(ctx); scrollTo(0, 0); return true; }
+  if (w === 'mano') { wz.step = 2; render(ctx); scrollTo(0, 0); return true; }
+  if (w === 'foto') { const f = ctx.$('wzFoto'); if (f) { f.value = ''; f.click(); } return true; }
+  if (w === 'togfoto') { const x = wz.foto.splice(+val, 1)[0]; if (x) URL.revokeObjectURL(x.u); render(ctx); return true; }
+  if (w === 'leggi') { leggiOra(ctx); return true; }
+  if (w === 'esci') { ctx.annulla(); return true; }
+  if (w === 'palestra') { p.palestra = val; wz.altra = false; render(ctx); return true; }
+  if (w === 'altra') { p.palestra = ''; wz.altra = true; render(ctx); const i = ctx.$('wzPal'); if (i) i.focus(); return true; }
+  if (w === 'allenamenti' || w === 'volte') { p[w] = +val; render(ctx); return true; }
+  if (w === 'crea') { ctx.crea(JSON.parse(JSON.stringify(p))); return true; }
   return false;
 }
-function toggle(ctx, id){
-  const p = wz.p, i = p.macchine.indexOf(id);
-  if (i < 0) p.macchine.push(id); else p.macchine.splice(i, 1);
-  const y = scrollY; render(ctx); scrollTo(0, y);
+async function leggiOra(ctx){
+  if (!ctx.lettore() && !ctx.chiave()) { wz.errore = 'manca la chiave API per la prova (sezione qui sotto)'; render(ctx); return; }
+  wz.stato = 'leggo'; wz.errore = ''; render(ctx);
+  try {
+    const o = await leggiScheda(wz.foto.map(x => x.f), {url: ctx.lettore(), chiave: ctx.chiave()});
+    await ctx.loadCat();
+    const out = trasforma(o, ctx.pool(wz.p.palestra), wz.p.palestra, ctx.GRUPPI);
+    wz.stato = ''; wz.foto.forEach(x => URL.revokeObjectURL(x.u)); wz.foto = [];
+    ctx.creaDaLettura(JSON.parse(JSON.stringify(wz.p)), out);
+  } catch (e) { wz.stato = ''; wz.errore = String(e.message || e); render(ctx); }
 }
-function redrawList(ctx){ const l = ctx.$('wzList'); if (l) l.innerHTML = listaMacchine(ctx, ctx.pool(), new Set(wz.p.macchine)); }
-export function input(ctx, t){
-  if (t.id === 'wzQ') { wz.q = t.value; redrawList(ctx); return true; }
-  if (t.dataset.att) { wz.p.att[t.dataset.att] = t.checked ? 1 : 0; return true; }
-  if (t.id === 'wzNome') { wz.p.nome = t.value.trim(); return true; }
-  return false;
+function leggi(ctx){
+  const k = ctx.$('wzKey'); if (k) ctx.chiave(k.value.trim());
+  const n = ctx.$('wzNome'); if (n) wz.p.nome = n.value.trim();
+  const g = ctx.$('wzPal'); if (g && g.value.trim()) wz.p.palestra = g.value.trim();
 }
-function crea(ctx){
-  const p = wz.p, by = {};
-  ctx.pool().forEach(m => by[m.id] = m);
-  const macchine = p.macchine.map(id => by[id] || ctx.M[id]).filter(Boolean);
-  const r = genera(Object.assign({}, p, {macchine}));
-  if (!r.giorni.length) { ctx.toast('Non sono riuscito a creare la scheda: prova a togliere qualche zona da evitare'); return; }
-  ctx.crea(JSON.parse(JSON.stringify(p)), r, macchine);
-}
+export function input(ctx){ leggi(ctx); return true; }
 export function riassunto(p){
   if (!p) return '';
-  const o = (OBIETTIVI.find(x => x[0] === p.obiettivo) || [])[1] || '', l = (LIVELLI.find(x => x[0] === p.livello) || [])[1] || '';
-  return [o, l, p.giorni + ' giorni da ' + p.minuti + ' minuti', p.macchine.length + (p.macchine.length === 1 ? ' macchina' : ' macchine'),
-    p.zone.length ? 'evita ' + ZONE.filter(([k]) => p.zone.includes(k)).map(([, x]) => x.toLowerCase()).join(', ') : ''].filter(Boolean).join(' · ');
+  return [p.palestra, p.volte ? p.volte + ' volte a settimana' : ''].filter(Boolean).join(' · ');
 }

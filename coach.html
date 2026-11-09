@@ -111,6 +111,14 @@ dialog .sheet label.f{color:var(--muted)}
 .wzdone{border:1.5px solid color-mix(in srgb,var(--accent) 45%,transparent)}
 .wzdone h2{margin:0}
 .catres button[aria-pressed="true"]{outline:2px solid var(--accent)}
+.chk{color:#C76A1E;font-weight:700}
+.wzfoto{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.wzfoto span{position:relative}
+.wzfoto img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:12px;display:block;border:1.5px solid var(--line2)}
+.wzfoto button{position:absolute;top:4px;right:4px;width:26px;height:26px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font:700 16px/1 var(--body)}
+.wzread{align-items:flex-start}
+.wzmano{align-self:center;margin-top:4px}
+.wzdubbi{margin:0;padding-left:18px;font-size:14px;line-height:1.4}
 </style>
 </head><body>
 <header class="apphead"><h1 id="hd">Coach</h1><span class="avatar" id="av" aria-hidden="true"></span></header>
@@ -264,29 +272,32 @@ function renderEdit(){
   $('foot').hidden = false;
   $('footIn').innerHTML = SOLO ? '<button type="button" class="primary" data-act="usa">' + (c.nuova ? 'Usa questa scheda' : 'Salva e torna all\'app') + '</button>'
                                 : '<button type="button" class="primary" data-act="send">Manda al cliente</button>';
-  let h = SOLO ? '<div class="top"><span class="eyebrow">' + (C.app || 'Scheda') + '</span><button type="button" class="ghost small" data-act="wiz">Rifai con le domande</button></div>' +
-      (c.nuova ? '<section class="card wzdone"><div class="eyebrow">Scheda pronta</div><h2>Ecco la tua scheda</h2><p class="hint">' + esc(SMOD ? SMOD.riassunto(c.profilo) : '') + '</p>' +
-        '<p style="margin:0">Ogni allenamento ha la variante A e la B: stessi muscoli, macchine diverse, l\'app le alterna. Tocca un esercizio per cambiare serie, ripetizioni o macchina. Quando ti va bene, premi <b>Usa questa scheda</b>.</p></section>' : '')
+  let h = SOLO ? '<div class="top"><span class="eyebrow">' + (C.app || 'Scheda') + '</span><button type="button" class="ghost small" data-act="wiz">Nome e palestra</button></div>' +
+      (c.nuova ? '<section class="card wzdone"><div class="eyebrow">' + esc(SMOD ? SMOD.riassunto(c.profilo) : '') + '</div>' +
+        (c.letta ? '<h2>Ecco la tua scheda</h2><p style="margin:0">L\'ho letta dalla foto: controllala con il foglio accanto. ' + (c.letta.controlla ? 'Gli esercizi con <span class="chk">la scritta in arancio</span> sono da verificare: tocca e scegli la macchina giusta. ' : '') + 'Tocca un esercizio per correggere serie, ripetizioni o macchina. Quando ti va bene premi <b>Usa questa scheda</b>.</p>' +
+          (c.letta.dubbi && c.letta.dubbi.length ? '<div class="eyebrow">Non ero sicuro di</div><ul class="wzdubbi">' + c.letta.dubbi.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '')
+        : '<h2>Ora copia la tua scheda</h2><p style="margin:0">Per ogni allenamento tocca <b>+ Esercizio</b>: scegli la macchina' + (palMacchine() ? ' (quelle di ' + esc(c.profilo.palestra) + ' sono già pronte)' : '') + ' o scrivi il nome dell\'esercizio, poi serie e ripetizioni. Il nome dell\'allenamento lo cambi toccandolo. Quando hai finito premi <b>Usa questa scheda</b>.</p>') + '</section>' : '')
     : '<div class="top"><button type="button" class="back" data-act="list">‹ Clienti</button><button type="button" class="ghost small" data-act="dup">Duplica</button></div>';
   h += '<div class="card"><label class="f">' + (SOLO ? 'Il tuo nome' : 'Nome del cliente') + '<input data-k="cliente" value="' + esc(c.cliente) + '" placeholder="Es. Marco" autocomplete="off"></label>' +
     '<div class="two"><label class="f">Allenamenti a settimana<input data-k="obiettivo" type="number" inputmode="numeric" min="1" max="7" value="' + esc(c.obiettivo) + '"></label>' +
-    '<label class="f">Nome della variante C<input data-k="varC" value="' + esc(c.varC || 'Corpo libero') + '"></label></div>' +
+    (SOLO ? '' : '<label class="f">Nome della variante C<input data-k="varC" value="' + esc(c.varC || 'Corpo libero') + '"></label>') + '</div>' +
     (SOLO ? '' : '<p class="hint">Ogni allenamento può avere fino a 3 varianti (A, B, C) con gli stessi muscoli su macchine diverse: l\'app le alterna da sola. Una variante vuota non compare.</p>') + '</div>';
   c.giorni.forEach((g, gi) => {
     const v = tab[g.id] || 'A', list = g[v] || [];
     h += '<section class="card c-' + g.id + '">' +
       '<div class="dh"><span class="sw"></span><input data-g="' + gi + '" data-gk="nome" value="' + esc(g.nome) + '" aria-label="Nome allenamento"><span class="ic"><button type="button" data-gmove="' + gi + '" data-d="-1" aria-label="Sposta su"' + (gi ? '' : ' disabled') + '>↑</button><button type="button" data-gmove="' + gi + '" data-d="1" aria-label="Sposta giù"' + (gi < c.giorni.length - 1 ? '' : ' disabled') + '>↓</button></span></div>' +
-      '<label class="f">Nota per il cliente (facoltativa)<input data-g="' + gi + '" data-gk="nota" value="' + esc(g.nota) + '" placeholder="Es. recupero 90 secondi"></label>' +
-      '<div class="tabs" role="group" aria-label="Variante">' + VV.map(x => '<button type="button" data-tab="' + g.id + '" data-v="' + x + '" aria-pressed="' + (x === v) + '">' + (x === 'C' ? esc(c.varC || 'C') : 'Var. ' + x) + ' · ' + (g[x] || []).length + '</button>').join('') + '</div>' +
-      '<ul class="el">' + (list.length ? list.map((e, i) => '<li><span class="n">' + (i + 1) + '</span><button type="button" class="t" style="all:unset;cursor:pointer;min-width:0" data-ed="' + gi + '|' + v + '|' + i + '"><b>' + esc(exLabel(e)) + '</b><small>' + esc((e.s || 3) + ' × ' + (e.r || '10')) + (e.g && e.g.length ? ' · ' + esc(e.g.join(', ')) : '') + '</small></button>' +
+      '<label class="f">' + (SOLO ? 'Nota (facoltativa)' : 'Nota per il cliente (facoltativa)') + '<input data-g="' + gi + '" data-gk="nota" value="' + esc(g.nota) + '" placeholder="Es. recupero 90 secondi"></label>' +
+      (SOLO && !(g.B || []).length && !(g.C || []).length && v === 'A' ? '' : '<div class="tabs" role="group" aria-label="Variante">' + VV.map(x => '<button type="button" data-tab="' + g.id + '" data-v="' + x + '" aria-pressed="' + (x === v) + '">' + (x === 'C' ? esc(c.varC || 'C') : 'Var. ' + x) + ' · ' + (g[x] || []).length + '</button>').join('') + '</div>') +
+      '<ul class="el">' + (list.length ? list.map((e, i) => '<li><span class="n">' + (i + 1) + '</span><button type="button" class="t" style="all:unset;cursor:pointer;min-width:0" data-ed="' + gi + '|' + v + '|' + i + '"><b>' + esc(exLabel(e)) + '</b><small>' + (e.chk ? '<span class="chk">' + (e.m ? 'Controlla che sia la tua macchina' : 'Scegli la macchina') + '</span> · ' : '') + esc((e.s || 3) + ' × ' + (e.r || '10')) + (e.g && e.g.length ? ' · ' + esc(e.g.join(', ')) : '') + '</small></button>' +
         '<span class="ic"><button type="button" data-mv="' + gi + '|' + v + '|' + i + '" data-d="-1" aria-label="Su"' + (i ? '' : ' disabled') + '>↑</button><button type="button" data-mv="' + gi + '|' + v + '|' + i + '" data-d="1" aria-label="Giù"' + (i < list.length - 1 ? '' : ' disabled') + '>↓</button><button type="button" data-ed="' + gi + '|' + v + '|' + i + '" aria-label="Modifica">✎</button></span></li>').join('')
-        : '<li style="grid-template-columns:1fr"><span class="hint">Nessun esercizio in questa variante.</span></li>') + '</ul>' +
+        : '<li style="grid-template-columns:1fr"><span class="hint">' + (SOLO ? 'Ancora nessun esercizio: tocca + Esercizio.' : 'Nessun esercizio in questa variante.') + '</span></li>') + '</ul>' +
       '<div class="crow"><button type="button" class="ghost small" data-add="' + gi + '|' + v + '">+ Esercizio</button>' +
+      (SOLO && !(g.B || []).length && !(g.C || []).length && v === 'A' && list.length ? '<button type="button" class="ghost small" data-tab="' + g.id + '" data-v="B">+ Variante</button>' : '') +
       (v !== 'A' && (g.A || []).length ? '<button type="button" class="ghost small" data-copya="' + gi + '|' + v + '">Copia da A</button>' : '') +
       '<button type="button" class="ghost small danger" data-gdel="' + gi + '">Elimina</button></div></section>';
   });
   h += (freeDayId(c) ? '<button type="button" class="ghost" data-act="addday">+ Aggiungi allenamento</button>' : '<p class="hint">Massimo 6 allenamenti.</p>') +
-    '<div class="card"><label class="f">Note generali, una per riga (le vede in fondo all\'app)<textarea data-k="note">' + esc((c.note || []).join('\n')) + '</textarea></label></div>' +
+    '<div class="card"><label class="f">' + (SOLO ? 'Note, una per riga (in fondo all\'app)' : 'Note generali, una per riga (le vede in fondo all\'app)') + '<textarea data-k="note">' + esc((c.note || []).join('\n')) + '</textarea></label></div>' +
     (SOLO ? (c.nuova ? '' : '<a class="ghost" style="text-align:center;text-decoration:none;color:var(--ink)" href="index.html">Torna all\'app senza salvare</a>') +
         '<p class="hint">' + esc(SMOD ? SMOD.CREDITI_GIF : '') + '</p>'
       : '<button type="button" class="ghost danger" data-act="del">Elimina questo cliente</button>');
@@ -298,7 +309,7 @@ let ed = null;   // {gi, v, i, e}
 // scelta della macchina a passi: muscolo -> marca -> macchine (o ricerca per nome)
 const pk = {step: 'g', g: '', b: '', q: ''};
 let myB = (() => { try { return localStorage.getItem('coach-pt-marca') || ''; } catch (e) { return ''; } })();
-const LIBNAME = 'La tua libreria';
+let LIBNAME = 'La tua libreria';
 // macro-gruppi per la scelta della macchina (richiesta di giulio): si guarda il primo muscolo della macchina
 const MACRO = [
   {n: 'Gambe', g: ['Quadricipiti', 'Femorali', 'Glutei', 'Polpacci', 'Adduttori'],
@@ -317,8 +328,12 @@ const MACRO = [
 const macroOf = m => { const g = (m.gruppi || [])[0]; const x = MACRO.find(o => o.g.includes(g)); return x ? x.n : ''; };
 // quanto è "principale" una macchina: posizione della prima parola chiave trovata nel nome (99 = meno conosciuta)
 const rankOf = (m, mac) => { const o = MACRO.find(x => x.n === mac), n = (m.nome || '').toLowerCase(); if (!o) return 99; const i = o.top.findIndex(r => r.test(n)); return i < 0 ? 99 : i + (/inclin|declin/.test(n) ? .5 : 0); };
+// versione da solo: le macchine di config.js sono quelle della palestra di config (es. Green Theory), si vedono solo a chi si allena lì
+let palWz = '';   // palestra scelta nella procedura, prima che la scheda esista
+function palMacchine(){ const c = SOLO && get(cur), p = (c && c.profilo && c.profilo.palestra) || (SOLO && palWz); return !!p && LIB.size > 0 && p.toLowerCase() === String(C.palestra || '').toLowerCase(); }
 function pool(){
-  const lib = Object.values(M).filter(m => LIB.has(m.id)).map(m => Object.assign({}, m, {lib: true}));
+  if (SOLO) LIBNAME = palMacchine() ? (C.palestra || LIBNAME) : LIBNAME;
+  const lib = Object.values(M).filter(m => LIB.has(m.id) && (!SOLO || palMacchine())).map(m => Object.assign({}, m, {lib: true}));
   return lib.concat(CAT || []);
 }
 const brandOf = m => m.lib ? LIBNAME : m.marca;
@@ -444,9 +459,12 @@ function drawPick(){
       '<label class="f">Chiave API<input id="recK" type="password" autocomplete="off" placeholder="sk-ant-…" value="' + esc(recKey()) + '"></label></details>';
   } else if (pk.step === 'b') {
     const by = {}; all.filter(m => macroOf(m) === pk.g).forEach(m => { const b = brandOf(m); by[b] = (by[b] || 0) + 1; });
-    const names = Object.keys(by).sort((a, b) => (a === LIBNAME ? -2 : a === myB ? -1 : 0) - (b === LIBNAME ? -2 : b === myB ? -1 : 0) || a.localeCompare(b));
+    // versione da solo: prima le marche che usa la catena della palestra scelta
+    const cm = SOLO && SMOD ? SMOD.marcheDi((get(cur) && get(cur).profilo || {}).palestra) : [];
+    const rk = x => x === LIBNAME ? -3 : cm.includes(x) ? -2 : x === myB ? -1 : 0;
+    const names = Object.keys(by).sort((a, b) => rk(a) - rk(b) || a.localeCompare(b));
     h += '<button type="button" class="back" data-pstep="g">‹ Muscoli</button><h3>' + esc(pk.g) + '</h3><p class="hint">Scegli la marca della macchina.</p>' +
-      '<div class="blist">' + names.map(b => '<button type="button" data-pb="' + esc(b) + '"><b>' + esc(b) + '</b>' + (b === myB ? '<em>ultima usata</em>' : '') + '<small>' + by[b] + '</small></button>').join('') + '</div>';
+      '<div class="blist">' + names.map(b => '<button type="button" data-pb="' + esc(b) + '"><b>' + esc(b) + '</b>' + (cm.includes(b) ? '<em>nella tua palestra</em>' : b === myB ? '<em>ultima usata</em>' : '') + '<small>' + by[b] + '</small></button>').join('') + '</div>';
   } else {
     const list = all.filter(m => macroOf(m) === pk.g && brandOf(m) === pk.b).map(m => Object.assign({}, m, {rk: rankOf(m, pk.g)}));
     list.sort((a, b) => a.rk - b.rk || (a.linea || '').localeCompare(b.linea || '') || a.nome.localeCompare(b.nome));
@@ -471,7 +489,7 @@ function drawEx(){
   $('sheet').innerHTML = '<div class="grab"></div><h3>' + (ed.i === null ? 'Nuovo esercizio' : 'Esercizio ' + (ed.i + 1)) + '</h3>' +
     (m ? '<div class="chosen">' + (m.foto ? '<img src="' + esc(m.foto) + (LIB.has(m.id) ? '' : '?c') + '" alt="">' : '<span class="noimg"></span>') +
           '<span><b>' + esc(m.nome) + '</b><small>' + esc([m.marca, m.linea].filter(Boolean).join(' · ')) + '</small></span><button type="button" class="ghost small" data-x="pick">Cambia</button></div>'
-       : '<label class="f">Nome dell\'esercizio<input id="exN" value="' + esc(e.n) + '" placeholder="Es. Panca piana con bilanciere"></label><button type="button" class="ghost small" data-x="pick">Scegli una macchina</button>') +
+       : '<label class="f">Nome dell\'esercizio<input id="exN" value="' + esc(e.n) + '" placeholder="Es. Panca piana con bilanciere"' + (SMOD && SMOD.NOMI_LIBERI ? ' list="exList" autocomplete="off"' : '') + '></label>' + (SMOD && SMOD.NOMI_LIBERI ? '<datalist id="exList">' + SMOD.NOMI_LIBERI.map(n => '<option value="' + esc(n) + '">').join('') + '</datalist>' : '') + '<button type="button" class="ghost small" data-x="pick">Scegli una macchina</button>') +
     '<div class="two"><label class="f">Serie<input id="exS" type="number" inputmode="numeric" min="1" max="12" value="' + esc(e.s) + '"></label>' +
     '<label class="f">Ripetizioni<input id="exR" value="' + esc(e.r) + '" placeholder="8-10"></label></div>' +
     '<details class="more"' + (more ? ' open' : '') + '><summary>Muscoli, consiglio e come si fa</summary>' +
@@ -493,6 +511,12 @@ function readEx(){
   e.p = $('exP').value.trim(); e.c = $('exC').value.split('\n').map(x => x.trim()).filter(Boolean);
   if (!e.c.length) delete e.c; if (!e.p) delete e.p;
   if (e.m) delete e.n; else delete e.m;
+  // versione da solo: animazione e passi dalla libreria, se il nome o la macchina corrispondono
+  if (SMOD && SMOD.daNome) {
+    const lib = e.m ? (M[e.m] ? SMOD.daMacchina(M[e.m]) : null) : SMOD.daNome(e.n);
+    if (lib && lib.x) { e.x = lib.x; if (lib.t) e.xt = lib.t; else delete e.xt; }
+    if (lib && !e.m) { if (!e.c && lib.c.length) e.c = lib.c.slice(); if (!(e.g && e.g.length)) e.g = lib.g.filter(x => GRUPPI.includes(x)); if (!e.p && lib.p) e.p = lib.p; }
+  }
 }
 $('dlg').addEventListener('click', e => {
   if (e.target === $('dlg')) { $('dlg').close(); return; }
@@ -524,7 +548,7 @@ $('dlg').addEventListener('click', e => {
   if (b.dataset.x === 'back') { drawEx(); return; }
   const c = get(cur), g = c.giorni[ed.gi];
   if (b.dataset.x === 'ok') {
-    readEx();
+    readEx(); delete ed.e.chk;
     if (!ed.e.m && !ed.e.n) { toast('Scegli una macchina o scrivi il nome'); return; }
     g[ed.v] = g[ed.v] || [];
     if (ed.i === null) g[ed.v].push(ed.e); else g[ed.v][ed.i] = ed.e;
@@ -634,22 +658,37 @@ $('dlg').addEventListener('close', () => { $('sheet').onclick = $('sheet').oncha
 // la scheda va direttamente nell'app (stessa memoria del telefono), come se fosse arrivata con il link del coach
 function usaScheda(c){
   if (!c.giorni.some(g => VV.some(v => (g[v] || []).length))) { toast('Aggiungi almeno un esercizio'); return; }
-  c.data = iso(new Date()); delete c.nuova; save();
-  const s = clean(c); s.solo = 1;
+  c.data = iso(new Date()); delete c.nuova; delete c.letta; save();
+  const s = clean(c); s.solo = 1; if (c.profilo && c.profilo.palestra) s.palestra = c.profilo.palestra;
   try { localStorage.setItem('scheda-pt-scheda-v1', JSON.stringify(s)); localStorage.setItem('scheda-pt-modo', 'solo'); }
   catch (e) { toast('Memoria del telefono piena: non sono riuscito a salvare'); return; }
   location.href = 'index.html';
 }
 // cosa serve alla procedura guidata (solo.js)
-const sctx = {C, M, $, esc, toast, loadCat, pool, macroOf, rankOf, MACRO,
+const sctx = {C, M, $, esc, toast, loadCat, pool: p => { if (p) palWz = p; return pool(); }, macroOf, rankOf, MACRO,
   riconosci(cb){ ed = {picking: true, wz: cb, e: {}}; pk.step = 'r'; pk.q = ''; drawPick(); if (!$('dlg').open) $('dlg').showModal(); },
   annulla(){ if (get(cur)) { view = 'edit'; render(); scrollTo(0, 0); } },
-  crea(profilo, r, macchine){
-    macchine.forEach(m => { if (!LIB.has(m.id)) { M[m.id] = m; db.cat[m.id] = m; } });
+  GRUPPI,
+  lettore: () => String(C.lettore || ''),
+  chiave(v){ try { if (v !== undefined) localStorage.setItem('coach-pt-claude', v); return localStorage.getItem('coach-pt-claude') || ''; } catch (e) { return ''; } },
+  creaDaLettura(profilo, out){
     const old = db.clienti[0];
-    const c = {id: old ? old.id : uid(), cliente: profilo.nome || '', obiettivo: r.giorni.length, varC: r.varC, giorni: r.giorni, note: r.note, profilo, data: iso(new Date()), nuova: true};
+    out.giorni.forEach(g => g.A.forEach(e => { if (e.m && !LIB.has(e.m) && !db.cat[e.m]) { const m = pool().find(x => x.id === e.m); if (m) { M[m.id] = m; db.cat[m.id] = m; } } }));
+    const c = {id: old ? old.id : uid(), cliente: profilo.nome || '', obiettivo: out.volte || out.giorni.length, varC: 'Corpo libero', giorni: out.giorni, note: out.note, profilo, data: iso(new Date()), nuova: true,
+      letta: {dubbi: out.dubbi, controlla: out.controlla}};
     db.clienti = [c]; save(); cur = c.id; view = 'edit'; tab = {}; render(); scrollTo(0, 0);
-    if (r.tolti) toast('Tolti ' + r.tolti + ' esercizi che caricano le zone da evitare');
+  },
+  haMacchine: p => !!p && LIB.size > 0 && p.toLowerCase() === String(C.palestra || '').toLowerCase(),
+  crea(profilo){
+    const old = db.clienti[0], n = Math.max(1, Math.min(6, profilo.allenamenti || 3));
+    let c;
+    if (old) {   // "Nome e palestra" su una scheda che c'è già: cambia solo questi, gli esercizi restano
+      c = old; c.cliente = profilo.nome || c.cliente; c.profilo = profilo; c.obiettivo = profilo.volte || c.obiettivo;
+    } else {
+      c = {id: uid(), cliente: profilo.nome || '', obiettivo: profilo.volte || n, varC: 'Corpo libero', note: [], profilo, data: iso(new Date()), nuova: true,
+        giorni: Array.from({length: n}, (_, i) => emptyDay(i + 1, n === 1 ? 'Allenamento' : 'Allenamento ' + String.fromCharCode(65 + i)))};
+    }
+    db.clienti = [c]; save(); cur = c.id; view = 'edit'; tab = {}; render(); scrollTo(0, 0);
   }
 };
 // chiudendo la fotocamera della procedura si torna alla lista aggiornata

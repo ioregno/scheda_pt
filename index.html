@@ -163,6 +163,7 @@ useScheda(SCH); cacheFoto(SCH);
 // versione da solo (solo.html / coach.html#solo): niente coach, la scheda la crea e la cambia chi si allena
 const SOLO = C.modo === 'solo' || !!(SCH && SCH.solo) || (() => { try { return localStorage.getItem('scheda-pt-modo') === 'solo'; } catch (e) { return false; } })();
 if (SOLO && !SCH && !/^#(s=|esempio|prova)/.test(location.hash)) location.replace('coach.html#solo');
+const PAL = () => SOLO ? (SCH && SCH.palestra) || '' : C.palestra || '';
 const nomeC = () => ((SCH && SCH.cliente) || '').trim();
 const LABC = () => (SCH && SCH.varC) || 'Corpo libero';
 const MESI = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
@@ -437,7 +438,7 @@ function renderEx(){
     const nameBtn = m ? '<button type="button" class="ex-name" data-slug="' + e.slug + '" data-label="' + esc(name) + '" data-i="' + i + '">' + nm.slice(0, sp + 1) + '<span class="nw">' + nm.slice(sp + 1) + '<span class="cam" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"/><path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/></svg></span></span></button>'
                       : e.gif || (e.come && e.come.length) ? '<button type="button" class="ex-name" data-free="' + i + '">' + nm.slice(0, sp + 1) + '<span class="nw">' + nm.slice(sp + 1) + '<span class="cam" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></span></span></button>'
                       : '<span class="ex-name plain">' + esc(name) + '</span>';
-    const meta = m ? esc([m.marca, m.distretto].filter(Boolean).join(' · ')) : (ui.variant === 'C' ? LABC() + ' · ' : (C.palestra ? C.palestra + ' · ' : '')) + esc(e.gruppi.join(', '));
+    const meta = m ? esc([m.marca, m.distretto].filter(Boolean).join(' · ')) : (ui.variant === 'C' ? LABC() + ' · ' : (PAL() ? esc(PAL()) + ' · ' : '')) + esc(e.gruppi.join(', '));
     return '<li class="ex' + (ck.includes(i) ? ' done' : '') + '"><button type="button" class="tick" data-i="' + i + '" aria-label="Spunta esercizio ' + (i+1) + '" aria-pressed="' + ck.includes(i) + '">' + (i+1) + '</button>' +
       '<div class="exh" style="min-width:0">' + nameBtn + '<div class="ex-meta">' + meta + '</div></div>' +
       '<div class="sets"><span class="num">' + e.serie + '×' + esc(e.rip) + '</span><small>serie × rip.</small></div><p class="why">' + esc(e.perche) + '</p>' + kgRow(e) + '</li>';
@@ -531,7 +532,7 @@ function renderInfo(){
   const s = demo && !realSch ? C.esempio : SCH;
   if (SOLO && !(demo && !realSch)) {
     const gif = DAYS.some(d => VARS.some(v => (d[v] || []).some(e => e.gif)));
-    $('schInfo').innerHTML = 'Scheda creata da te' + (s && s.data ? ' il ' + fmt(s.data) : '') + '. <a href="coach.html#solo-modifica">Modifica la scheda</a>' +
+    $('schInfo').innerHTML = 'La tua scheda' + (PAL() ? ' · ' + esc(PAL()) : '') + (s && s.data ? ', aggiornata il ' + fmt(s.data) : '') + '. <a href="coach.html#solo-modifica">Modifica la scheda</a>' +
       (gif ? '<br><small>Animazioni degli esercizi: disegni Everkinetic (everkinetic.com), licenza <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.it" target="_blank" rel="noopener">CC BY-SA 4.0</a>, animati e ricolorati.</small>' : '');
     $('notes').innerHTML = D.note.map(n => '<li>' + esc(n) + '</li>').join('');
     return;
