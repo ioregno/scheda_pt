@@ -72,6 +72,45 @@ details.more .f{margin-top:10px}
 .hint{color:var(--muted);font-size:13px;margin:0}
 .linkout{width:100%;min-height:90px;border-radius:14px;border:1.5px solid var(--line2);padding:10px;font:12px/1.35 ui-monospace,monospace;background:var(--bg);color:var(--ink)}
 dialog .sheet label.f{color:var(--muted)}
+/* versione da solo: procedura guidata (solo.js) */
+.wz{display:flex;flex-direction:column;gap:16px}
+.wz h2{margin:0}
+.wzhero p{margin:8px 0 0;line-height:1.45}
+.wzbar{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.wzbar span{height:4px;border-radius:4px;background:var(--line2)}
+.wzbar span.on{background:var(--accent)}
+.wzlist{display:flex;flex-direction:column;gap:10px}
+.wzopt{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:4px;background:var(--surface);border:1.5px solid var(--line2);border-radius:18px;padding:16px}
+.wzopt b{font:700 17px/1.15 var(--body)}
+.wzopt small{color:var(--muted);font:500 14px/1.3 var(--body)}
+.wzopt[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
+.wzopt[aria-pressed="true"] small{color:var(--on-accent);opacity:.8}
+.wztabs{margin-top:4px;padding-top:12px;border-top:1px solid var(--line2)}
+.wztabs .wzopt{border-radius:12px!important;padding:9px 12px!important}
+.wztabs .wzopt b{font-size:14px!important}
+.wzopt:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.wzchips{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.wzchips .wzopt{align-items:center;padding:13px 6px}
+.wzchips.wzwrap{display:flex;flex-wrap:wrap}
+.wzchips.wzwrap .wzopt{padding:11px 14px;border-radius:999px}
+.wzchips.wzwrap .wzopt b{font-size:15px}
+.wzg{margin-top:6px}
+.wzgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.wzt{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:6px;background:var(--bg);border:1.5px solid var(--line2);border-radius:16px;padding:6px 6px 9px;position:relative;font:600 13px/1.2 var(--body);overflow-wrap:anywhere}
+.wzt img,.wzt .noimg{width:100%;aspect-ratio:1;object-fit:contain;background:#fff;border-radius:11px;display:block}
+.wzt span{padding:0 3px}
+.wzt small{display:block;color:var(--muted);font-weight:500}
+.wzt[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 16%,var(--bg))}
+.wzt[aria-pressed="true"]::after{content:"✓";position:absolute;top:10px;right:10px;width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font:800 15px/1 var(--body)}
+.wzsel{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.wzsel li{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg);border-radius:14px;padding:8px 8px 8px 12px}
+.wzsel li span{font:600 14px/1.25 var(--body);min-width:0}
+.wzsel small{display:block;color:var(--muted);font-weight:500}
+.wzchk{display:flex;align-items:center;gap:10px;font:500 15px/1.3 var(--body);padding:6px 0}
+.wzchk input{width:22px;height:22px;accent-color:var(--accent)}
+.wzdone{border:1.5px solid color-mix(in srgb,var(--accent) 45%,transparent)}
+.wzdone h2{margin:0}
+.catres button[aria-pressed="true"]{outline:2px solid var(--accent)}
 </style>
 </head><body>
 <header class="apphead"><h1 id="hd">Coach</h1><span class="avatar" id="av" aria-hidden="true"></span></header>
@@ -87,7 +126,9 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // #prova: pagina Coach di prova, con due clienti già pronti e schede salvate a parte (non tocca quelle vere)
 const PROVA = location.hash === '#prova';
-const CKEY = PROVA ? 'coach-pt-prova-v1' : 'coach-pt-v1';
+// #solo: versione per chi si allena da solo (solo.js): procedura guidata, una sola scheda, "Usa questa scheda" la mette nell'app
+const SOLO = !PROVA && /^#solo/.test(location.hash);
+const CKEY = PROVA ? 'coach-pt-prova-v1' : SOLO ? 'solo-pt-v1' : 'coach-pt-v1';
 const M = {}; (C.macchine || []).forEach(m => M[m.id] = m);
 const GRUPPI = (C.gruppi || ['Petto','Spalle','Schiena','Tricipiti','Bicipiti','Quadricipiti','Femorali','Glutei','Polpacci','Addominali']);
 const VV = ['A','B','C'];
@@ -104,7 +145,8 @@ const uid = () => 'c' + Date.now().toString(36) + Math.random().toString(36).sli
   document.documentElement.style.setProperty('--accent', c);
   document.documentElement.style.setProperty('--on-accent', lum < 0.6 ? '#FFFFFF' : '#111111');
 })();
-$('hd').textContent = 'Coach'; $('av').textContent = (C.coach || 'C').trim().charAt(0).toUpperCase();
+$('hd').textContent = SOLO ? 'La tua scheda' : 'Coach'; $('av').textContent = (C.coach || 'C').trim().charAt(0).toUpperCase();
+if (SOLO) document.title = 'La tua scheda';
 
 let db = {clienti: []};
 try { const x = JSON.parse(localStorage.getItem(CKEY)); if (x && Array.isArray(x.clienti)) db = x; } catch (e) {}
@@ -114,6 +156,15 @@ const LIB = new Set(Object.keys(M));
 db.cat = db.cat || {};
 Object.keys(db.cat).forEach(id => { if (!M[id]) M[id] = db.cat[id]; });
 let cur = null, tab = {}, view = 'list';
+// versione da solo: se la scheda c'è già si apre per modificarla, altrimenti parte la procedura guidata
+let SMOD = null;
+if (SOLO) {
+  // dall'icona sulla Home (coach.html#solo) con la scheda già in uso si va dritti all'app; "Modifica la scheda" usa #solo-modifica
+  let inUso = false; try { inUso = !!localStorage.getItem('scheda-pt-scheda-v1'); } catch (e) {}
+  if (location.hash === '#solo' && db.clienti[0] && !db.clienti[0].nuova && inUso) location.replace('index.html');
+  if (db.clienti[0]) { cur = db.clienti[0].id; view = 'edit'; } else view = 'wiz';
+  import('./solo.js').then(m => { SMOD = m; if (view === 'wiz') m.avvia(); render(); }).catch(() => { $('v').innerHTML = '<div class="card"><p style="margin:0">Non riesco ad aprire la procedura: ricarica la pagina con internet.</p></div>'; });
+}
 const get = id => db.clienti.find(c => c.id === id);
 let tt; function toast(m){ const t = $('toast'); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2400); }
 
@@ -123,7 +174,7 @@ function clean(c){
   // solo quello che serve al cliente, con chiavi corte
   return {id: c.id, cliente: c.cliente, obiettivo: +c.obiettivo || c.giorni.length, varC: c.varC || 'Corpo libero', data: c.data,
     giorni: c.giorni.map(g => { const o = {id: g.id, nome: g.nome}; if (g.nota) o.nota = g.nota;
-      VV.forEach(v => { if ((g[v] || []).length) o[v] = g[v].map(e => { const x = {}; if (e.m) x.m = e.m; else x.n = e.n || 'Esercizio'; x.s = +e.s || 3; x.r = e.r || '10'; if (e.g && e.g.length) x.g = e.g; if (e.p) x.p = e.p; if (e.c && e.c.length) x.c = e.c; return x; }); });
+      VV.forEach(v => { if ((g[v] || []).length) o[v] = g[v].map(e => { const x = {}; if (e.m) x.m = e.m; else x.n = e.n || 'Esercizio'; x.s = +e.s || 3; x.r = e.r || '10'; if (e.g && e.g.length) x.g = e.g; if (e.p) x.p = e.p; if (e.c && e.c.length) x.c = e.c; if (e.x) x.x = e.x; if (e.xt) x.xt = e.xt; return x; }); });
       return o; }),
     note: (c.note || []).filter(Boolean), mac: macOf(c)};
 }
@@ -175,7 +226,7 @@ const exLabel = e => e.m && M[e.m] ? M[e.m].nome : (e.n || 'Esercizio');
 // ---------- prova a tempo (facoltativa) ----------
 // solo se in config.js c'è "scadenza" (AAAA-MM-GG): dal giorno dopo la pagina Coach si blocca, niente schede nuove né modifiche.
 // Senza scadenza non cambia niente. I clienti continuano a usare la scheda che hanno già, e il coach può sempre scaricare il backup.
-const SCAD = !PROVA && /^\d{4}-\d{2}-\d{2}$/.test(C.scadenza || '') ? C.scadenza : '';
+const SCAD = !PROVA && !SOLO && /^\d{4}-\d{2}-\d{2}$/.test(C.scadenza || '') ? C.scadenza : '';
 const scaduta = () => !!SCAD && iso(new Date()) > SCAD;
 function renderScaduta(){
   $('foot').hidden = true; if ($('dlg').open) $('dlg').close();
@@ -193,6 +244,7 @@ function render(){
   if (scaduta()) return renderScaduta();
   if (view === 'list') return renderList();
   if (view === 'edit') return renderEdit();
+  if (view === 'wiz') { if (SMOD) SMOD.render(sctx); else { $('foot').hidden = true; $('v').innerHTML = '<p class="hint">Un attimo…</p>'; } }
 }
 let scrollY0 = 0;
 function renderList(){
@@ -210,12 +262,16 @@ function renderList(){
 function renderEdit(){
   const c = get(cur); if (!c) { view = 'list'; return renderList(); }
   $('foot').hidden = false;
-  $('footIn').innerHTML = '<button type="button" class="primary" data-act="send">Manda al cliente</button>';
-  let h = '<div class="top"><button type="button" class="back" data-act="list">‹ Clienti</button><button type="button" class="ghost small" data-act="dup">Duplica</button></div>' +
-    '<div class="card"><label class="f">Nome del cliente<input data-k="cliente" value="' + esc(c.cliente) + '" placeholder="Es. Marco" autocomplete="off"></label>' +
+  $('footIn').innerHTML = SOLO ? '<button type="button" class="primary" data-act="usa">' + (c.nuova ? 'Usa questa scheda' : 'Salva e torna all\'app') + '</button>'
+                                : '<button type="button" class="primary" data-act="send">Manda al cliente</button>';
+  let h = SOLO ? '<div class="top"><span class="eyebrow">' + (C.app || 'Scheda') + '</span><button type="button" class="ghost small" data-act="wiz">Rifai con le domande</button></div>' +
+      (c.nuova ? '<section class="card wzdone"><div class="eyebrow">Scheda pronta</div><h2>Ecco la tua scheda</h2><p class="hint">' + esc(SMOD ? SMOD.riassunto(c.profilo) : '') + '</p>' +
+        '<p style="margin:0">Ogni allenamento ha la variante A e la B: stessi muscoli, macchine diverse, l\'app le alterna. Tocca un esercizio per cambiare serie, ripetizioni o macchina. Quando ti va bene, premi <b>Usa questa scheda</b>.</p></section>' : '')
+    : '<div class="top"><button type="button" class="back" data-act="list">‹ Clienti</button><button type="button" class="ghost small" data-act="dup">Duplica</button></div>';
+  h += '<div class="card"><label class="f">' + (SOLO ? 'Il tuo nome' : 'Nome del cliente') + '<input data-k="cliente" value="' + esc(c.cliente) + '" placeholder="Es. Marco" autocomplete="off"></label>' +
     '<div class="two"><label class="f">Allenamenti a settimana<input data-k="obiettivo" type="number" inputmode="numeric" min="1" max="7" value="' + esc(c.obiettivo) + '"></label>' +
     '<label class="f">Nome della variante C<input data-k="varC" value="' + esc(c.varC || 'Corpo libero') + '"></label></div>' +
-    '<p class="hint">Ogni allenamento può avere fino a 3 varianti (A, B, C) con gli stessi muscoli su macchine diverse: l\'app le alterna da sola. Una variante vuota non compare.</p></div>';
+    (SOLO ? '' : '<p class="hint">Ogni allenamento può avere fino a 3 varianti (A, B, C) con gli stessi muscoli su macchine diverse: l\'app le alterna da sola. Una variante vuota non compare.</p>') + '</div>';
   c.giorni.forEach((g, gi) => {
     const v = tab[g.id] || 'A', list = g[v] || [];
     h += '<section class="card c-' + g.id + '">' +
@@ -231,7 +287,9 @@ function renderEdit(){
   });
   h += (freeDayId(c) ? '<button type="button" class="ghost" data-act="addday">+ Aggiungi allenamento</button>' : '<p class="hint">Massimo 6 allenamenti.</p>') +
     '<div class="card"><label class="f">Note generali, una per riga (le vede in fondo all\'app)<textarea data-k="note">' + esc((c.note || []).join('\n')) + '</textarea></label></div>' +
-    '<button type="button" class="ghost danger" data-act="del">Elimina questo cliente</button>';
+    (SOLO ? (c.nuova ? '' : '<a class="ghost" style="text-align:center;text-decoration:none;color:var(--ink)" href="index.html">Torna all\'app senza salvare</a>') +
+        '<p class="hint">' + esc(SMOD ? SMOD.CREDITI_GIF : '') + '</p>'
+      : '<button type="button" class="ghost danger" data-act="del">Elimina questo cliente</button>');
   $('v').innerHTML = h;
 }
 
@@ -374,7 +432,8 @@ function drawPick(){
       '<button type="button" class="ghost" data-pstep="r">Riconosci da una foto</button>' +
       '<button type="button" class="ghost" data-x="free">Esercizio senza macchina</button>';
   } else if (pk.step === 'r') {
-    h += '<button type="button" class="back" data-pstep="g">‹ Muscoli</button><h3>Riconosci da una foto</h3>' +
+    h += (ed.wz ? '<button type="button" class="back" data-x="no">‹ Fatto</button><h3>Fotografa le tue macchine</h3><p class="hint">Scatta, poi tocca la macchina giusta nella lista: si aggiunge alla tua palestra. Poi scatta la prossima.</p>'
+                : '<button type="button" class="back" data-pstep="g">‹ Muscoli</button><h3>Riconosci da una foto</h3>') +
       '<p class="hint">Fotografa la macchina intera, da davanti o di tre quarti, con poca gente intorno. Il confronto avviene sul telefono: la foto non va a nessuno.</p>' +
       '<input id="recF" type="file" accept="image/*" hidden>' +
       '<button type="button" class="primary" data-r="file">Scatta o scegli una foto</button>' +
@@ -430,7 +489,7 @@ function readEx(){
   if (!$('exS')) return;
   const e = ed.e;
   e.s = Math.max(1, Math.min(12, Math.round(+$('exS').value) || 3)); e.r = $('exR').value.trim() || '10';
-  if ($('exN')) e.n = $('exN').value.trim();
+  if ($('exN')) { const n = $('exN').value.trim(); if (n !== e.n) { delete e.x; delete e.xt; } e.n = n; }
   e.p = $('exP').value.trim(); e.c = $('exC').value.split('\n').map(x => x.trim()).filter(Boolean);
   if (!e.c.length) delete e.c; if (!e.p) delete e.p;
   if (e.m) delete e.n; else delete e.m;
@@ -445,14 +504,21 @@ $('dlg').addEventListener('click', e => {
   const pick = e.target.closest('[data-cat]');
   if (pick) {
     const m = pool().find(x => x.id === pick.dataset.cat);
+    if (m && ed && ed.wz) {   // procedura guidata: la macchina si aggiunge alla palestra e si resta sulla fotocamera
+      if (!m.lib) { M[m.id] = m; db.cat[m.id] = m; save(); }
+      if (pk.step === 'r') recRicorda(m.id);
+      ed.wz(m); pick.setAttribute('aria-pressed', 'true'); return;
+    }
     if (m) {
       if (!m.lib) { M[m.id] = m; db.cat[m.id] = m; save(); myB = m.marca; try { localStorage.setItem('coach-pt-marca', myB); } catch (err) {} }
       if (pk.step === 'r' && ed.picking) recRicorda(m.id);
+      if (ed.e.m !== m.id) { delete ed.e.x; delete ed.e.xt; }
       ed.e.m = m.id; delete ed.e.n; if (m.gruppi && m.gruppi.length) ed.e.g = m.gruppi.filter(x => GRUPPI.includes(x));
     }
     drawEx(); return;
   }
   const b = e.target.closest('[data-x]'); if (!b) return;
+  if (ed && ed.wz) { $('dlg').close(); return; }
   if (b.dataset.x === 'pick') { readEx(); pk.g = ed.e.m && M[ed.e.m] ? macroOf(M[ed.e.m]) : ''; pk.step = pk.g ? 'b' : 'g'; pk.q = ''; drawPick(); return; }
   if (b.dataset.x === 'free') { ed.e.m = ''; drawEx(); setTimeout(() => $('exN') && $('exN').focus(), 50); return; }
   if (b.dataset.x === 'back') { drawEx(); return; }
@@ -499,6 +565,7 @@ function touch(c){ c.data = iso(new Date()); c.inviata = false; save(); }
 
 // ---------- eventi della pagina ----------
 $('v').addEventListener('input', e => {
+  if (view === 'wiz') { if (SMOD) SMOD.input(sctx, e.target); return; }
   const c = get(cur); if (!c) return;
   const k = e.target.dataset.k;
   if (k === 'note') c.note = e.target.value.split('\n').map(x => x.trim()).filter(Boolean);
@@ -509,6 +576,8 @@ $('v').addEventListener('input', e => {
   touch(c);
 });
 document.addEventListener('click', e => {
+  const w = e.target.closest('[data-w]');
+  if (w && view === 'wiz' && SMOD && !w.closest('dialog')) { SMOD.click(sctx, w); return; }
   const t = e.target.closest('button,[data-open]'); if (!t || t.closest('dialog')) return;
   const d = t.dataset, c = get(cur);
   if (d.open) { cur = d.open; view = 'edit'; tab = {}; render(); scrollTo(0, 0); return; }
@@ -519,6 +588,8 @@ document.addEventListener('click', e => {
   if (d.act === 'del') { if (t.dataset.armed) { db.clienti = db.clienti.filter(x => x.id !== cur); save(); view = 'list'; render(); toast('Cliente eliminato'); } else { t.dataset.armed = 1; t.textContent = 'Sicuro? Tocca di nuovo per eliminare'; } return; }
   if (d.act === 'addday') { const i = freeDayId(c); c.giorni.push(emptyDay(i, 'Allenamento ' + String.fromCharCode(64 + c.giorni.length + 1))); touch(c); render(); window.scrollTo(0, scrollY0 + 300); return; }
   if (d.act === 'bkdown') return backupDown();
+  if (d.act === 'usa') return usaScheda(c);
+  if (d.act === 'wiz') { if (!SMOD) return; SMOD.avvia(c.profilo, true); view = 'wiz'; render(); scrollTo(0, 0); return; }
   if (d.tab) { tab[d.tab] = d.v; render(); window.scrollTo(0, scrollY0); return; }
   if (d.add) { const [gi, v] = d.add.split('|'); openEx(+gi, v, null); return; }
   if (d.ed) { const [gi, v, i] = d.ed.split('|'); openEx(+gi, v, +i); return; }
@@ -558,6 +629,31 @@ document.addEventListener('change', e => {
   }).catch(() => toast('File non valido'));
 });
 $('dlg').addEventListener('close', () => { $('sheet').onclick = $('sheet').onchange = null; });
+
+// ---------- versione da solo ----------
+// la scheda va direttamente nell'app (stessa memoria del telefono), come se fosse arrivata con il link del coach
+function usaScheda(c){
+  if (!c.giorni.some(g => VV.some(v => (g[v] || []).length))) { toast('Aggiungi almeno un esercizio'); return; }
+  c.data = iso(new Date()); delete c.nuova; save();
+  const s = clean(c); s.solo = 1;
+  try { localStorage.setItem('scheda-pt-scheda-v1', JSON.stringify(s)); localStorage.setItem('scheda-pt-modo', 'solo'); }
+  catch (e) { toast('Memoria del telefono piena: non sono riuscito a salvare'); return; }
+  location.href = 'index.html';
+}
+// cosa serve alla procedura guidata (solo.js)
+const sctx = {C, M, $, esc, toast, loadCat, pool, macroOf, rankOf, MACRO,
+  riconosci(cb){ ed = {picking: true, wz: cb, e: {}}; pk.step = 'r'; pk.q = ''; drawPick(); if (!$('dlg').open) $('dlg').showModal(); },
+  annulla(){ if (get(cur)) { view = 'edit'; render(); scrollTo(0, 0); } },
+  crea(profilo, r, macchine){
+    macchine.forEach(m => { if (!LIB.has(m.id)) { M[m.id] = m; db.cat[m.id] = m; } });
+    const old = db.clienti[0];
+    const c = {id: old ? old.id : uid(), cliente: profilo.nome || '', obiettivo: r.giorni.length, varC: r.varC, giorni: r.giorni, note: r.note, profilo, data: iso(new Date()), nuova: true};
+    db.clienti = [c]; save(); cur = c.id; view = 'edit'; tab = {}; render(); scrollTo(0, 0);
+    if (r.tolti) toast('Tolti ' + r.tolti + ' esercizi che caricano le zone da evitare');
+  }
+};
+// chiudendo la fotocamera della procedura si torna alla lista aggiornata
+$('dlg').addEventListener('close', () => { if (ed && ed.wz) { ed = null; render(); } });
 if (PROVA) {
   if (!db.clienti.length && C.esempio) {
     const a = newClient(C.esempio); a.cliente = 'Marco';

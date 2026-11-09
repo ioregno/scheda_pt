@@ -43,6 +43,7 @@
     </div>
     <p class="pwhy" id="why"></p>
     <p class="daynote" id="daynote"></p>
+    <p class="extra" id="soloEdit" hidden><a href="coach.html#solo-modifica">Modifica la scheda</a> · cambia esercizi, serie e macchine</p>
   </section>
 
   <ol class="exs" id="exs"></ol>
@@ -125,16 +126,22 @@ function addMac(s){
 }
 // le foto della scheda si salvano nel telefono appena arriva, così in palestra si vedono anche senza internet
 function cacheFoto(s){
-  if (!s || !s.mac || !window.caches) return;
-  const urls = Object.values(s.mac).map(o => o && o.f).filter(Boolean);
+  if (!s || !window.caches || !(s.mac || gifDi(s).length)) return;
+  const urls = Object.values(s.mac || {}).map(o => o && o.f).filter(Boolean).concat(gifDi(s));
   caches.open('catalogo-foto').then(c => Promise.all(urls.map(u => c.match(u).then(r => r || c.add(u)).catch(() => {})))).catch(() => {});
+}
+// animazioni degli esercizi (gif/<id>.gif): si salvano nel telefono insieme alla scheda
+function gifDi(s){
+  const o = new Set();
+  ((s && s.giorni) || []).forEach(g => ['A','B','C'].forEach(v => (g[v] || []).forEach(e => { if (/^[a-z0-9-]+$/.test(e.x || '')) o.add('gif/' + e.x + '.gif'); })));
+  return Array.from(o);
 }
 function expand(s){
   addMac(s);
   const out = [];
   (s.giorni || []).forEach((g, gi) => {
     const d = {id: /^g[1-6]$/.test(g.id) ? g.id : 'g' + (gi + 1), nome: g.nome || 'Allenamento ' + (gi + 1), nota: g.nota || ''};
-    ['A','B','C'].forEach(v => d[v] = (g[v] || []).map(e => ({slug: e.m && M[e.m] ? e.m : null, nome: e.m && M[e.m] ? '' : (e.n || (e.m ? e.m : 'Esercizio')), serie: +e.s || 3, rip: String(e.r || '10'), gruppi: e.g && e.g.length ? e.g : (e.m && M[e.m] && M[e.m].gruppi) || [], perche: e.p || '', come: e.c && e.c.length ? e.c : null})));
+    ['A','B','C'].forEach(v => d[v] = (g[v] || []).map(e => ({slug: e.m && M[e.m] ? e.m : null, nome: e.m && M[e.m] ? '' : (e.n || (e.m ? e.m : 'Esercizio')), serie: +e.s || 3, rip: String(e.r || '10'), gruppi: e.g && e.g.length ? e.g : (e.m && M[e.m] && M[e.m].gruppi) || [], perche: e.p || '', gif: /^[a-z0-9-]+$/.test(e.x || '') ? e.x : '', gifNota: e.xt || '', come: e.c && e.c.length ? e.c : null})));
     const gr = []; ['A','B','C'].forEach(v => d[v].forEach(e => e.gruppi.forEach(x => { if (!gr.includes(x)) gr.push(x); })));
     d.gruppi = g.gruppi && g.gruppi.length ? g.gruppi : gr;
     // nome corto per le etichette della settimana: "Allenamento A" diventa "A", "Petto e braccia" diventa "Petto"
@@ -153,6 +160,9 @@ function useScheda(s){
   D = {gruppi: gr, note: (s && s.note) || []};
 }
 useScheda(SCH); cacheFoto(SCH);
+// versione da solo (solo.html / coach.html#solo): niente coach, la scheda la crea e la cambia chi si allena
+const SOLO = C.modo === 'solo' || !!(SCH && SCH.solo) || (() => { try { return localStorage.getItem('scheda-pt-modo') === 'solo'; } catch (e) { return false; } })();
+if (SOLO && !SCH && !/^#(s=|esempio|prova)/.test(location.hash)) location.replace('coach.html#solo');
 const nomeC = () => ((SCH && SCH.cliente) || '').trim();
 const LABC = () => (SCH && SCH.varC) || 'Corpo libero';
 const MESI = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
@@ -425,6 +435,7 @@ function renderEx(){
     const name = exName(e);
     const nm = esc(name), sp = nm.lastIndexOf(' ');
     const nameBtn = m ? '<button type="button" class="ex-name" data-slug="' + e.slug + '" data-label="' + esc(name) + '" data-i="' + i + '">' + nm.slice(0, sp + 1) + '<span class="nw">' + nm.slice(sp + 1) + '<span class="cam" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"/><path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/></svg></span></span></button>'
+                      : e.gif || (e.come && e.come.length) ? '<button type="button" class="ex-name" data-free="' + i + '">' + nm.slice(0, sp + 1) + '<span class="nw">' + nm.slice(sp + 1) + '<span class="cam" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></span></span></button>'
                       : '<span class="ex-name plain">' + esc(name) + '</span>';
     const meta = m ? esc([m.marca, m.distretto].filter(Boolean).join(' · ')) : (ui.variant === 'C' ? LABC() + ' · ' : (C.palestra ? C.palestra + ' · ' : '')) + esc(e.gruppi.join(', '));
     return '<li class="ex' + (ck.includes(i) ? ' done' : '') + '"><button type="button" class="tick" data-i="' + i + '" aria-label="Spunta esercizio ' + (i+1) + '" aria-pressed="' + ck.includes(i) + '">' + (i+1) + '</button>' +
@@ -518,6 +529,13 @@ function render(){
 // chi ti segue e quando è stata aggiornata la scheda
 function renderInfo(){
   const s = demo && !realSch ? C.esempio : SCH;
+  if (SOLO && !(demo && !realSch)) {
+    const gif = DAYS.some(d => VARS.some(v => (d[v] || []).some(e => e.gif)));
+    $('schInfo').innerHTML = 'Scheda creata da te' + (s && s.data ? ' il ' + fmt(s.data) : '') + '. <a href="coach.html#solo-modifica">Modifica la scheda</a>' +
+      (gif ? '<br><small>Animazioni degli esercizi: disegni Everkinetic (everkinetic.com), licenza <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.it" target="_blank" rel="noopener">CC BY-SA 4.0</a>, animati e ricolorati.</small>' : '');
+    $('notes').innerHTML = D.note.map(n => '<li>' + esc(n) + '</li>').join('');
+    return;
+  }
   $('schInfo').innerHTML = 'Scheda di <b>' + esc(C.coach || 'il tuo coach') + '</b>' + (s && s.data ? ', aggiornata il ' + fmt(s.data) : '') + (C.palestra ? ' · ' + esc(C.palestra) : '');
   $('notes').innerHTML = D.note.map(n => '<li>' + esc(n) + '</li>').join('');
 }
@@ -528,12 +546,27 @@ function openMachine(slug, label, idx){
   const ex = idx !== undefined && BY[ui.day] ? BY[ui.day][ui.variant][+idx] : null, cm = ex && ex.come, gr = ex ? ex.gruppi : [];
   const img = m.img ? '<div class="phw"><img class="photo" src="' + m.img + '" alt="' + esc(m.nome) + '"></div>'
                     : '<div class="ph"><b>Foto in arrivo</b>La foto di questa macchina non è ancora stata scaricata.<a href="' + esc(m.url) + '" target="_blank" rel="noopener">Apri la scheda ufficiale</a></div>';
-  $('sheetM').innerHTML = '<div class="grab"></div>' + img +
+  $('sheetM').innerHTML = '<div class="grab"></div>' + img + gifHtml(ex) +
     '<div><div class="eyebrow">' + esc([m.marca, m.linea].filter(Boolean).join(' · ') || 'Macchina') + '</div><h3>' + esc(label || m.nome) + '</h3></div>' +
     '<div class="ex-meta" style="font-size:14px">' + esc(m.distretto) + '</div>' +
     (cm ? '<div class="eyebrow">Come usarla per ' + esc((gr.length > 1 ? gr.slice(0, -1).join(', ') + ' e ' + gr[gr.length - 1] : gr[0] || '').toLowerCase()) + '</div><ol>' + cm.map(x => '<li>' + esc(x) + '</li>').join('') + '</ol>'
-        : (m.esecuzione && m.esecuzione.length ? '<ol>' + m.esecuzione.map(x => '<li>' + esc(x) + '</li>').join('') + '</ol>' : '<p class="extra">Se non sai come regolarla, chiedi al tuo coach.</p>') + (m.consiglio ? '<p class="tip">' + esc(m.consiglio) + '</p>' : '')) +
+        : (m.esecuzione && m.esecuzione.length ? '<ol>' + m.esecuzione.map(x => '<li>' + esc(x) + '</li>').join('') + '</ol>' : '<p class="extra">Se non sai come regolarla, chiedi ' + (SOLO ? 'allo staff della palestra' : 'al tuo coach') + '.</p>') + (m.consiglio ? '<p class="tip">' + esc(m.consiglio) + '</p>' : '')) +
     (m.url ? '<a href="' + esc(m.url) + '" target="_blank" rel="noopener">Scheda ufficiale sul sito</a>' : '') +
+    '<button type="button" class="ghost close" data-close="dlgM">Chiudi</button>';
+  $('dlgM').showModal();
+}
+// animazione del movimento (disegni Everkinetic, CC BY-SA 4.0)
+function gifHtml(ex){
+  if (!ex || !ex.gif) return '';
+  return '<figure class="gifw"><img src="gif/' + ex.gif + '.gif" alt="Animazione del movimento" loading="lazy"><figcaption>' + esc(ex.gifNota || (ex.slug ? 'Il movimento, disegnato su una macchina dello stesso tipo: la tua può avere sedile e impugnature un po\' diversi.' : 'Il movimento')) + '</figcaption></figure>';
+}
+// foglio di un esercizio senza macchina: animazione, come si fa e consiglio
+function openFree(idx){
+  const ex = BY[ui.day] && BY[ui.day][ui.variant][idx]; if (!ex) return;
+  $('sheetM').innerHTML = '<div class="grab"></div>' + gifHtml(ex) +
+    '<div><div class="eyebrow">' + esc(ex.gruppi.join(' · ')) + '</div><h3>' + esc(ex.nome) + '</h3></div>' +
+    (ex.come ? '<div class="eyebrow">Come si fa</div><ol>' + ex.come.map(x => '<li>' + esc(x) + '</li>').join('') + '</ol>' : '') +
+    (ex.perche ? '<p class="tip">' + esc(ex.perche) + '</p>' : '') +
     '<button type="button" class="ghost close" data-close="dlgM">Chiudi</button>';
   $('dlgM').showModal();
 }
@@ -572,6 +605,7 @@ $('exs').addEventListener('click', e => {
     setKg(stp.dataset.key, Math.max(0, Math.round((cur + +stp.dataset.kgstep) * 10) / 10)); renderEx(); return;
   }
   const n = e.target.closest('.ex-name[data-slug]'); if (n) { hidePeek(); openMachine(n.dataset.slug, n.dataset.label, n.dataset.i); return; }
+  const fr = e.target.closest('.ex-name[data-free]'); if (fr) { openFree(+fr.dataset.free); return; }
   const t = e.target.closest('.tick'); if (!t) return;
   const k = iso(today()) + ui.day + ui.variant, i = +t.dataset.i;
   const a = ui.checks[k] || []; ui.checks = {[k]: a.includes(i) ? a.filter(x => x !== i) : a.concat(i)}; saveUi(); renderEx();
@@ -658,6 +692,13 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('click', e => { if (e.target.id === 'demoGo' || e.target.id === 'demoGo2' || e.target.id === 'demoGo3') setDemo(true); if (e.target.id === 'demoExit') setDemo(false); });
 setSync(); render();
+// versione da solo: il resoconto diventa facoltativo (si condivide con chi si vuole) e sta in "Backup e note"
+if (SOLO) {
+  $('soloEdit').hidden = false;
+  $('repGo').textContent = 'Condividi i tuoi ultimi 7 giorni';
+  $('repBox').querySelector('small').textContent = 'Facoltativo: pesi e stelle in un messaggio, da mandare a un amico o a un PT.';
+  $('bkCopy').closest('details').appendChild($('repBox'));
+}
 // prova per chi valuta l'app (link prova.html → index.html#prova): esempio senza salvare, Esci torna alla presentazione
 const PROVA = location.hash === '#prova';
 if (PROVA) {
@@ -686,7 +727,7 @@ function reportText(){
 }
 $('repGo').addEventListener('click', () => {
   const txt = reportText();
-  if (C.whatsapp) { location.href = 'https://wa.me/' + String(C.whatsapp).replace(/\D/g, '') + '?text=' + encodeURIComponent(txt); return; }
+  if (C.whatsapp && !SOLO) { location.href = 'https://wa.me/' + String(C.whatsapp).replace(/\D/g, '') + '?text=' + encodeURIComponent(txt); return; }
   if (navigator.share) { navigator.share({text: txt}).catch(() => {}); return; }
   try { navigator.clipboard.writeText(txt).then(() => toast('Resoconto copiato'), () => toast('Copia non riuscita')); } catch (e) { toast('Copia non riuscita'); }
 });
