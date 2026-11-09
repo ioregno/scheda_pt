@@ -142,7 +142,8 @@ function expand(s){
   const out = [];
   (s.giorni || []).forEach((g, gi) => {
     const d = {id: /^g[1-6]$/.test(g.id) ? g.id : 'g' + (gi + 1), nome: g.nome || 'Allenamento ' + (gi + 1), nota: g.nota || ''};
-    ['A','B','C'].forEach(v => d[v] = (g[v] || []).map(e => ({slug: e.m && M[e.m] ? e.m : null, nome: e.m && M[e.m] ? '' : (e.n || (e.m ? e.m : 'Esercizio')), serie: +e.s || 3, rip: String(e.r || '10'), gruppi: e.g && e.g.length ? e.g : (e.m && M[e.m] && M[e.m].gruppi) || [], perche: e.p || '', gif: /^[a-z0-9-]+$/.test(e.x || '') ? e.x : '', gifNota: e.xt || '', come: e.c && e.c.length ? e.c : null})));
+    ['A','B','C'].forEach(v => d[v] = (g[v] || []).map(e => ({slug: e.m && M[e.m] ? e.m : null, nome: e.n || (e.m && M[e.m] ? '' : (e.m || 'Esercizio')),   // il nome scritto vince: nella versione da solo resta quello del foglio
+      serie: +e.s || 3, rip: String(e.r || '10'), gruppi: e.g && e.g.length ? e.g : (e.m && M[e.m] && M[e.m].gruppi) || [], perche: e.p || '', gif: /^[a-z0-9-]+$/.test(e.x || '') ? e.x : '', gifNota: e.xt || '', come: e.c && e.c.length ? e.c : null})));
     const gr = []; ['A','B','C'].forEach(v => d[v].forEach(e => e.gruppi.forEach(x => { if (!gr.includes(x)) gr.push(x); })));
     d.gruppi = g.gruppi && g.gruppi.length ? g.gruppi : gr;
     // nome corto per le etichette della settimana: "Allenamento A" diventa "A", "Petto e braccia" diventa "Petto"
@@ -439,7 +440,7 @@ function renderEx(){
     const nameBtn = m ? '<button type="button" class="ex-name" data-slug="' + e.slug + '" data-label="' + esc(name) + '" data-i="' + i + '">' + nm.slice(0, sp + 1) + '<span class="nw">' + nm.slice(sp + 1) + '<span class="cam" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"/><path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/></svg></span></span></button>'
                       : e.gif || (e.come && e.come.length) ? '<button type="button" class="ex-name" data-free="' + i + '">' + nm.slice(0, sp + 1) + '<span class="nw">' + nm.slice(sp + 1) + '<span class="cam" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></span></span></button>'
                       : '<span class="ex-name plain">' + esc(name) + '</span>';
-    const meta = m ? esc([m.marca, m.distretto].filter(Boolean).join(' · ')) : (ui.variant === 'C' ? LABC() + ' · ' : (PAL() ? esc(PAL()) + ' · ' : '')) + esc(e.gruppi.join(', '));
+    const meta = m ? esc([m.marca, m.distretto].filter(Boolean).join(' · ')) : esc([ui.variant === 'C' ? LABC() : PAL(), e.gruppi.join(', ')].filter(Boolean).join(' · '));
     return '<li class="ex' + (ck.includes(i) ? ' done' : '') + '"><button type="button" class="tick" data-i="' + i + '" aria-label="Spunta esercizio ' + (i+1) + '" aria-pressed="' + ck.includes(i) + '">' + (i+1) + '</button>' +
       '<div class="exh" style="min-width:0">' + nameBtn + '<div class="ex-meta">' + meta + '</div></div>' +
       '<div class="sets"><span class="num">' + e.serie + '×' + esc(e.rip) + '</span><small>serie × rip.</small></div><p class="why">' + esc(e.perche) + '</p>' + kgRow(e) + '</li>';
