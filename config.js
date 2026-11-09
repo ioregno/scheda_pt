@@ -8,11 +8,12 @@
 //   indirizzo  (facoltativo) indirizzo dell'app online, es. "https://mario-pt.netlify.app/"
 //   scadenza   (facoltativa, solo per le prove) fine prova, es. "2026-11-10": dal giorno dopo la pagina Coach si blocca, i clienti no. Vuota = nessun limite
 //   assistenza (con la scadenza) numero WhatsApp di chi vende l'app, per il tasto "Attiva la versione completa"
+//   licenze   (facoltativo) indirizzo del server dei codici di attivazione (strumenti/licenze-worker.js): l'app chiede il codice al primo avvio. Vuoto = nessun codice
 //   gruppi     muscoli tra cui scegliere
 //   macchine   la tua libreria: id (senza spazi), nome, marca, distretto, gruppi, esecuzione (passi), consiglio, foto ("foto/nome.jpg")
 //   esempio    scheda di esempio: la vedono i clienti in "Guarda un esempio" e tu come modello
 var CONFIG = {
- "versione": "5",
+ "versione": "6",
  "app": "Scheda",
  "coach": "Il tuo coach",
  "indirizzo": "",
@@ -21,6 +22,7 @@ var CONFIG = {
  "whatsapp": "",
  "scadenza": "",
  "assistenza": "",
+ "licenze": "",
  "gruppi": [
   "Petto",
   "Spalle",

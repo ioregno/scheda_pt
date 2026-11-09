@@ -23,7 +23,7 @@ Riconoscere una macchina da una foto (solo pagina Coach): `riconosci.js` carica 
 
 ## Versione "da solo" (senza PT)
 
-Per chi si allena da solo con una scheda che ha già (non la crea l'app: la rende facile da seguire ogni giorno). Si apre da `solo.html` (o `coach.html#solo`). Intro corta: nome e palestra (le catene con almeno 30 centri, più "Un'altra palestra"), poi quanti allenamenti ha la scheda e quante volte a settimana. Poi si copia la scheda a mano nell'editor della pagina Coach: per ogni esercizio la macchina (prima quelle delle marche della catena) o il nome dell'esercizio, serie e ripetizioni. Con "Usa questa scheda" va nell'app (`index.html`), dove tutto resta com'è: pesi, stelle, storico, offline.
+Per chi si allena da solo con una scheda che ha già (non la crea l'app: la rende facile da seguire ogni giorno). Si apre da `solo.html` (o `coach.html#solo`). Intro corta: nome e palestra (le catene con almeno 30 centri, più "Un'altra palestra"), poi "Scrivi la tua scheda": la si copia come sul foglio, una riga per esercizio ("Leg press 4x10 rec 90", "3 serie da 12", note tra parentesi), con il nome dell'allenamento sopra ("Giorno A", "Gambe:"). `leggiTesto` e `trasforma` in `solo.js` riconoscono gli esercizi senza macchina (nome uguale alla libreria, o con in più solo l'attrezzo) e le macchine (tabella `SIN` dall'italiano ai nomi dei produttori, poi le macchine della palestra, la marca scritta, le marche della catena). Prima di cercare, `capisci` sistema come si scrive di fretta: parole attaccate ("legpress"), errori di battitura (distanza di 1-2 lettere dalle parole conosciute), abbreviazioni ("bil", "man") e nomi da palestra (`ALIAS`, es. "flessioni" = Piegamenti, "military" = Lento avanti). Se ci sono più macchine simili l'esercizio resta in arancio da controllare nell'editor. Prove: `node strumenti/prove/misura.mjs strumenti/prove/righe-3.mjs` (quattro gruppi di righe scritte come le scrive la gente; i gruppi 3 e 4 prima delle correzioni davano 82% e 80%). Chi preferisce può aggiungere gli esercizi uno alla volta. Con "Usa questa scheda" va nell'app (`index.html`), dove tutto resta com'è: pesi, stelle, storico, offline.
 
 - `solo.js`: intro e `CATENE`, le marche note per catena (Green Theory: Panatta, Diamond, Lacertosus; Anytime Fitness: Life Fitness, Hammer Strength; Icon: Matrix, Technogym; McFit: gym80; Orange e Virgin Active: Technogym; le altre vuote finché non le sappiamo). Le macchine di quelle marche vengono proposte per prime; se la palestra è quella di `config.js` si usa la sua libreria.
 - Niente lettura della scheda da foto: tolta il 2026-11-09 perché richiedeva un server con una chiave API pagata per ogni lettura (si trova nel commit d165cb6 se servisse).
@@ -32,3 +32,20 @@ Per chi si allena da solo con una scheda che ha già (non la crea l'app: la rend
 - Nell'app da solo: niente "chiedi al coach"; "Modifica la scheda" porta a `coach.html#solo-modifica`; il resoconto diventa facoltativo ("Condividi i tuoi ultimi 7 giorni" in "Backup e note"). Le schede dei PT non cambiano: i clienti senza scheda vedono ancora "La tua scheda arriva dal coach".
 - Per una copia solo "da solo" (senza pagina per PT): in `config.js` metti `"modo": "solo"`, così l'app senza scheda apre subito l'intro.
 - Il catalogo serve internet la prima volta; poi l'app funziona offline.
+
+## Codici di attivazione (facoltativi)
+
+Per vendere l'app senza che chi la compra la giri agli amici. Con `"licenze"` in `config.js` (indirizzo del server) l'app al primo avvio chiede un codice tipo `ABCD-EF23-GH45`; il server controlla che ogni codice sia attivo al massimo su 2 telefoni (si cambia quando lo crei). Dopo l'attivazione l'app funziona anche offline e ogni 3 giorni, se c'è rete, ricontrolla: un codice bloccato o "liberato" smette di funzionare su quel telefono. Se il server non risponde l'app continua a funzionare.
+
+- `licenza.js`: la schermata "Attiva l'app" (caricata da `index.html` e `coach.html`). Non chiede niente nelle demo (`#prova`, `#esempio`, `prova.html`) e ai clienti di un PT (scheda arrivata dal coach); la chiede nella versione da solo e nella pagina Coach.
+- `strumenti/licenze-worker.js`: il server (Cloudflare Worker + KV, gratis). Istruzioni in cima al file. Con `/admin` alla fine dell'indirizzo c'è la pagina per creare i codici (con il nome di chi li ha comprati), vedere quanti telefoni li usano, liberarli o bloccarli.
+- Su iPhone Safari e l'app sulla schermata Home hanno memorie separate: attivarla in entrambi usa 2 telefoni. Per questo la schermata dice di attivarla dalla Home.
+- Non è una protezione assoluta: il codice dell'app è comunque scaricabile dal browser e chi sa programmare può togliere il controllo. Ferma l'amica che riceve il link. Per non rendere pubblico anche il repository, pubblicare l'app con Cloudflare Pages da un repository privato invece di GitHub Pages.
+
+### Spostare l'app su Cloudflare Pages (repository privato)
+
+1. dash.cloudflare.com > Workers & Pages > Create > Pages > Connect to Git: autorizza GitHub e scegli questo repository, ramo `main`. Framework: nessuno, build command vuoto, output directory `/`.
+2. L'indirizzo sarà `nome-progetto.pages.dev` (si sceglie il nome del progetto). Mettilo in `ORIGINE` del worker dei codici.
+3. Solo dopo, su GitHub: Settings > General > Change visibility > Private (GitHub Pages smette di funzionare).
+4. Attenzione: i dati dell'app (scheda, pesi, storico) sono legati all'indirizzo. Chi l'ha già usata dal vecchio indirizzo deve fare il backup e ricaricarlo nel nuovo.
+
