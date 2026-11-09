@@ -1,0 +1,15 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0A0A0A">
+<title>La tua scheda</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+</head><body style="background:#0A0A0A">
+<script>
+// Ingresso della versione "da solo": da qui in poi l'app non parla più di coach.
+// Se la scheda c'è già si apre l'app, altrimenti la procedura guidata.
+try { localStorage.setItem('scheda-pt-modo', 'solo'); } catch (e) {}
+var has = false; try { has = !!localStorage.getItem('scheda-pt-scheda-v1'); } catch (e) {}
+location.replace(has ? 'index.html' : 'coach.html#solo');
+</script>
+</body></html>

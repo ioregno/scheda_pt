@@ -342,3 +342,7 @@ dialog.full{margin:0;width:100%;max-width:none;height:100%;max-height:none;borde
 .newsch p{margin:0}
 .newsch .days{display:flex;flex-wrap:wrap;gap:6px}
 .report{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+/* animazione del movimento nel foglio esercizio (versione da solo) */
+.gifw{margin:0;display:flex;flex-direction:column;gap:6px}
+.gifw img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:20px;background:#1C1A17}
+.gifw figcaption{font-size:13px;line-height:1.35;color:var(--muted)}
