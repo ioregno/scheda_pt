@@ -32,3 +32,20 @@ Per chi si allena da solo con una scheda che ha già (non la crea l'app: la rend
 - Nell'app da solo: niente "chiedi al coach"; "Modifica la scheda" porta a `coach.html#solo-modifica`; il resoconto diventa facoltativo ("Condividi i tuoi ultimi 7 giorni" in "Backup e note"). Le schede dei PT non cambiano: i clienti senza scheda vedono ancora "La tua scheda arriva dal coach".
 - Per una copia solo "da solo" (senza pagina per PT): in `config.js` metti `"modo": "solo"`, così l'app senza scheda apre subito l'intro.
 - Il catalogo serve internet la prima volta; poi l'app funziona offline.
+
+## Codici di attivazione (facoltativi)
+
+Per vendere l'app senza che chi la compra la giri agli amici. Con `"licenze"` in `config.js` (indirizzo del server) l'app al primo avvio chiede un codice tipo `ABCD-EF23-GH45`; il server controlla che ogni codice sia attivo al massimo su 2 telefoni (si cambia quando lo crei). Dopo l'attivazione l'app funziona anche offline e ogni 3 giorni, se c'è rete, ricontrolla: un codice bloccato o "liberato" smette di funzionare su quel telefono. Se il server non risponde l'app continua a funzionare.
+
+- `licenza.js`: la schermata "Attiva l'app" (caricata da `index.html` e `coach.html`). Non chiede niente nelle demo (`#prova`, `#esempio`, `prova.html`) e ai clienti di un PT (scheda arrivata dal coach); la chiede nella versione da solo e nella pagina Coach.
+- `strumenti/licenze-worker.js`: il server (Cloudflare Worker + KV, gratis). Istruzioni in cima al file. Con `/admin` alla fine dell'indirizzo c'è la pagina per creare i codici (con il nome di chi li ha comprati), vedere quanti telefoni li usano, liberarli o bloccarli.
+- Su iPhone Safari e l'app sulla schermata Home hanno memorie separate: attivarla in entrambi usa 2 telefoni. Per questo la schermata dice di attivarla dalla Home.
+- Non è una protezione assoluta: il codice dell'app è comunque scaricabile dal browser e chi sa programmare può togliere il controllo. Ferma l'amica che riceve il link. Per non rendere pubblico anche il repository, pubblicare l'app con Cloudflare Pages da un repository privato invece di GitHub Pages.
+
+### Spostare l'app su Cloudflare Pages (repository privato)
+
+1. dash.cloudflare.com > Workers & Pages > Create > Pages > Connect to Git: autorizza GitHub e scegli questo repository, ramo `main`. Framework: nessuno, build command vuoto, output directory `/`.
+2. L'indirizzo sarà `nome-progetto.pages.dev` (si sceglie il nome del progetto). Mettilo in `ORIGINE` del worker dei codici.
+3. Solo dopo, su GitHub: Settings > General > Change visibility > Private (GitHub Pages smette di funzionare).
+4. Attenzione: i dati dell'app (scheda, pesi, storico) sono legati all'indirizzo. Chi l'ha già usata dal vecchio indirizzo deve fare il backup e ricaricarlo nel nuovo.
+
