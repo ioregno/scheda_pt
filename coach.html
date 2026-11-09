@@ -115,6 +115,42 @@ dialog .sheet label.f{color:var(--muted)}
 .wzmano{align-self:center;margin-top:4px}
 .wztesto textarea{min-height:300px;font:500 16px/1.5 var(--body)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+/* ingresso a schermi corti: una card, titolo grande, due righe, un bottone */
+.wzc{background:var(--raise,var(--surface));border-radius:28px;padding:28px 22px 22px;display:flex;flex-direction:column;gap:18px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.wzc h2{font-size:36px;line-height:1.02;text-transform:none}
+.wzc>p{margin:0;font:400 18px/1.45 var(--body);color:var(--muted)}
+.wzc .primary{margin-top:6px}
+.wzc .f input{font-size:20px;padding:15px 16px;border-radius:16px}
+.wzic{display:grid;place-items:center;width:112px;height:112px;margin:6px auto;border-radius:50%;background:color-mix(in srgb,var(--accent) 18%,var(--bg));color:var(--ink)}
+.wzpassi{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:16px;counter-reset:p}
+.wzpassi li{counter-increment:p;display:flex;flex-direction:column;gap:3px;font:400 16px/1.4 var(--body);color:var(--muted)}
+.wzpassi b{font:700 17px/1.25 var(--body);color:var(--ink)}
+.wzpassi b::before{content:counter(p) ". "}
+.wzdots{display:flex;gap:5px}
+.wzdots span{width:18px;height:4px;border-radius:4px;background:var(--line2)}
+.wzdots span.on{background:var(--accent)}
+.wz .top{min-height:34px}
+/* la tua scheda: come l'hai scritta, con la figura di ogni esercizio */
+.shint{margin:8px 0 0;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.sx{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.sx li{display:grid;grid-template-columns:68px 1fr;gap:12px;align-items:center;background:var(--bg);border-radius:16px;padding:8px}
+.sfig{all:unset;box-sizing:border-box;width:68px;height:68px;border-radius:12px;background:#fff;display:grid;place-items:center;overflow:hidden;color:#8a8478}
+button.sfig{cursor:pointer}
+.sfig img{width:100%;height:100%;object-fit:contain}
+.sfig.q{background:color-mix(in srgb,var(--accent) 22%,var(--bg));border:2px dashed var(--accent)}
+.fq{font:800 34px/1 var(--body);color:var(--ink)}
+.fq.mini{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;font-size:15px;background:color-mix(in srgb,var(--accent) 30%,var(--bg))}
+.fx{font:700 22px/1 var(--body);display:grid;place-items:center}
+.st{all:unset;box-sizing:border-box;cursor:pointer;min-width:0;display:flex;flex-direction:column;gap:3px}
+.st b{font:600 16px/1.25 var(--body);overflow-wrap:anywhere}
+.st small{color:var(--muted);font:500 13px/1.3 var(--body)}
+.st small.sm{color:var(--ink);opacity:.75}
+.st small.q{color:#C76A1E;opacity:1;font-weight:700}
+.sdn{display:flex;align-items:center;gap:10px;font:700 19px/1.25 var(--body)!important;text-transform:none!important;letter-spacing:0!important;margin:2px 0 4px}
+.sdn .sw{width:12px;height:12px;border-radius:50%;background:var(--dc);flex:none}
+.sadd{align-self:flex-start;color:var(--muted);padding:4px 2px}
+.sprof{align-self:center;color:var(--muted)}
+#sheet .wzgrid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
 </style>
 </head><body>
 <header class="apphead"><h1 id="hd">Coach</h1><span class="avatar" id="av" aria-hidden="true"></span></header>
@@ -168,7 +204,7 @@ if (SOLO) {
   let inUso = false; try { inUso = !!localStorage.getItem('scheda-pt-scheda-v1'); } catch (e) {}
   if (location.hash === '#solo' && db.clienti[0] && !db.clienti[0].nuova && inUso) location.replace('index.html');
   if (db.clienti[0]) { cur = db.clienti[0].id; view = 'edit'; } else view = 'wiz';
-  import('./solo.js').then(m => { SMOD = m; if (view === 'wiz') m.avvia(); render(); }).catch(() => { $('v').innerHTML = '<div class="card"><p style="margin:0">Non riesco ad aprire la procedura: ricarica la pagina con internet.</p></div>'; });
+  import('./solo.js').then(m => { SMOD = m; if (view === 'wiz') m.avvia(); render(); if (view === 'edit') loadCat(); }).catch(() => { $('v').innerHTML = '<div class="card"><p style="margin:0">Non riesco ad aprire la procedura: ricarica la pagina con internet.</p></div>'; });
 }
 const get = id => db.clienti.find(c => c.id === id);
 let tt; function toast(m){ const t = $('toast'); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2400); }
@@ -179,7 +215,7 @@ function clean(c){
   // solo quello che serve al cliente, con chiavi corte
   return {id: c.id, cliente: c.cliente, obiettivo: +c.obiettivo || c.giorni.length, varC: c.varC || 'Corpo libero', data: c.data,
     giorni: c.giorni.map(g => { const o = {id: g.id, nome: g.nome}; if (g.nota) o.nota = g.nota;
-      VV.forEach(v => { if ((g[v] || []).length) o[v] = g[v].map(e => { const x = {}; if (e.m) x.m = e.m; else x.n = e.n || 'Esercizio'; x.s = +e.s || 3; x.r = e.r || '10'; if (e.g && e.g.length) x.g = e.g; if (e.p) x.p = e.p; if (e.c && e.c.length) x.c = e.c; if (e.x) x.x = e.x; if (e.xt) x.xt = e.xt; return x; }); });
+      VV.forEach(v => { if ((g[v] || []).length) o[v] = g[v].map(e => { const x = {}; if (e.m) x.m = e.m; if (e.n || !e.m) x.n = e.n || 'Esercizio'; x.s = +e.s || 3; x.r = e.r || '10'; if (e.g && e.g.length) x.g = e.g; if (e.p) x.p = e.p; if (e.c && e.c.length) x.c = e.c; if (e.x) x.x = e.x; if (e.xt) x.xt = e.xt; return x; }); });
       return o; }),
     note: (c.note || []).filter(Boolean), mac: macOf(c)};
 }
@@ -266,6 +302,7 @@ function renderList(){
 }
 function renderEdit(){
   const c = get(cur); if (!c) { view = 'list'; return renderList(); }
+  if (SOLO) { if (SMOD) SMOD.renderScheda(sctx, c); else { $('foot').hidden = true; $('v').innerHTML = '<p class="hint">Un attimo…</p>'; } return; }
   $('foot').hidden = false;
   $('footIn').innerHTML = SOLO ? '<button type="button" class="primary" data-act="usa">' + (c.nuova ? 'Usa questa scheda' : 'Salva e torna all\'app') + '</button>'
                                 : '<button type="button" class="primary" data-act="send">Manda al cliente</button>';
@@ -337,7 +374,7 @@ function openEx(gi, v, i){
   const c = get(cur), g = c.giorni[gi];
   const e = i === null ? {m: '', n: '', s: 3, r: '10', g: [], p: ''} : JSON.parse(JSON.stringify(g[v][i]));
   ed = {gi, v, i, e};
-  if (i === null) { pk.step = 'g'; pk.q = ''; drawPick(); } else drawEx();
+  if (i === null && !SOLO) { pk.step = 'g'; pk.q = ''; drawPick(); } else drawEx();
   $('dlg').showModal();
 }
 // ---------- riconoscere la macchina da una foto (riconosci.js: modello sul telefono + confronto con le foto del catalogo) ----------
@@ -481,6 +518,17 @@ function pickSearch(all){
 function drawEx(){
   ed.picking = false; recStop();
   const e = ed.e, m = e.m && M[e.m];
+  if (SOLO) {   // versione da solo: solo quello che c'è sul foglio; il macchinario si sceglie dal "?"
+    $('sheet').innerHTML = '<div class="grab"></div><h3>' + (ed.i === null ? 'Nuovo esercizio' : 'Esercizio') + '</h3>' +
+      '<label class="f">Nome<input id="exN" value="' + esc(e.n || (m ? m.nome : '')) + '" placeholder="Es. Leg press" autocomplete="off"></label>' +
+      '<div class="two"><label class="f">Serie<input id="exS" type="number" inputmode="numeric" min="1" max="12" value="' + esc(e.s) + '"></label>' +
+      '<label class="f">Ripetizioni<input id="exR" value="' + esc(e.r) + '" placeholder="10"></label></div>' +
+      '<label class="f">Nota<input id="exP" value="' + esc(e.p) + '" placeholder="Es. recupero 90 secondi"></label>' +
+      '<button type="button" class="primary" data-x="ok">' + (ed.i === null ? 'Aggiungi' : 'Salva') + '</button>' +
+      (ed.i === null ? '' : '<button type="button" class="ghost danger" data-x="del">Elimina esercizio</button>') +
+      '<button type="button" class="ghost close" data-x="no">Annulla</button>';
+    return;
+  }
   const more = !!(e.p || (e.c && e.c.length));
   $('sheet').innerHTML = '<div class="grab"></div><h3>' + (ed.i === null ? 'Nuovo esercizio' : 'Esercizio ' + (ed.i + 1)) + '</h3>' +
     (m ? '<div class="chosen">' + (m.foto ? '<img src="' + esc(m.foto) + (LIB.has(m.id) ? '' : '?c') + '" alt="">' : '<span class="noimg"></span>') +
@@ -502,6 +550,18 @@ $('dlg').addEventListener('input', e => {
 function readEx(){
   if (!$('exS')) return;
   const e = ed.e;
+  if (SOLO) {
+    e.s = Math.max(1, Math.min(12, Math.round(+$('exS').value) || 3)); e.r = $('exR').value.trim() || '10';
+    e.p = $('exP').value.trim(); if (!e.p) delete e.p;
+    const n = $('exN').value.trim(), prima = e.n || (e.m && M[e.m] ? M[e.m].nome : '');
+    if (n && n !== prima && SMOD) {   // nome cambiato: si rilegge come una riga della scheda (figura, o "?" se è un macchinario)
+      const x = (SMOD.scritta(SMOD.leggiTesto('Giorno\n' + n), GRUPPI).giorni[0] || {A: []}).A[0];
+      ['m', 'q', 'k', 'x', 'xt', 'mx', 'c', 'g', 'ch'].forEach(k => delete e[k]);
+      if (x) ['q', 'k', 'x', 'xt', 'c', 'g', 'ch'].forEach(k => { if (x[k] != null) e[k] = x[k]; });
+    }
+    e.n = n.charAt(0).toUpperCase() + n.slice(1);
+    return;
+  }
   e.s = Math.max(1, Math.min(12, Math.round(+$('exS').value) || 3)); e.r = $('exR').value.trim() || '10';
   if ($('exN')) { const n = $('exN').value.trim(); if (n !== e.n) { delete e.x; delete e.xt; } e.n = n; }
   e.p = $('exP').value.trim(); e.c = $('exC').value.split('\n').map(x => x.trim()).filter(Boolean);
@@ -533,7 +593,7 @@ $('dlg').addEventListener('click', e => {
       if (!m.lib) { M[m.id] = m; db.cat[m.id] = m; save(); myB = m.marca; try { localStorage.setItem('coach-pt-marca', myB); } catch (err) {} }
       if (pk.step === 'r' && ed.picking) recRicorda(m.id);
       if (ed.e.m !== m.id) { delete ed.e.x; delete ed.e.xt; }
-      ed.e.m = m.id; delete ed.e.n; if (m.gruppi && m.gruppi.length) ed.e.g = m.gruppi.filter(x => GRUPPI.includes(x));
+      ed.e.m = m.id; if (!SOLO) delete ed.e.n; if (m.gruppi && m.gruppi.length) ed.e.g = m.gruppi.filter(x => GRUPPI.includes(x));
     }
     drawEx(); return;
   }
@@ -595,9 +655,12 @@ $('v').addEventListener('input', e => {
   if (k === 'varC') { document.querySelectorAll('[data-v="C"]').forEach(b => b.textContent = (c.varC || 'C') + ' · ' + b.textContent.split(' · ').pop()); }
   touch(c);
 });
+$('v').addEventListener('keydown', e => { if (view === 'wiz' && SMOD) SMOD.tasto(sctx, e); });
 document.addEventListener('click', e => {
   const w = e.target.closest('[data-w]');
   if (w && view === 'wiz' && SMOD && !w.closest('dialog')) { SMOD.click(sctx, w); return; }
+  const sb = e.target.closest('[data-s]');
+  if (sb && SOLO && view === 'edit' && SMOD && !sb.closest('dialog')) { SMOD.clickScheda(sctx, get(cur), sb); return; }
   const t = e.target.closest('button,[data-open]'); if (!t || t.closest('dialog')) return;
   const d = t.dataset, c = get(cur);
   if (d.open) { cur = d.open; view = 'edit'; tab = {}; render(); scrollTo(0, 0); return; }
@@ -609,7 +672,7 @@ document.addEventListener('click', e => {
   if (d.act === 'addday') { const i = freeDayId(c); c.giorni.push(emptyDay(i, 'Allenamento ' + String.fromCharCode(64 + c.giorni.length + 1))); touch(c); render(); window.scrollTo(0, scrollY0 + 300); return; }
   if (d.act === 'bkdown') return backupDown();
   if (d.act === 'usa') return usaScheda(c);
-  if (d.act === 'wiz') { if (!SMOD) return; SMOD.avvia(c.profilo, true); view = 'wiz'; render(); scrollTo(0, 0); return; }
+  if (d.act === 'wiz') { if (!SMOD) return; SMOD.avvia(c.profilo, 'profilo'); view = 'wiz'; render(); scrollTo(0, 0); return; }
   if (d.tab) { tab[d.tab] = d.v; render(); window.scrollTo(0, scrollY0); return; }
   if (d.add) { const [gi, v] = d.add.split('|'); openEx(+gi, v, null); return; }
   if (d.ed) { const [gi, v, i] = d.ed.split('|'); openEx(+gi, v, +i); return; }
@@ -665,14 +728,20 @@ const sctx = {C, M, $, esc, toast, loadCat, pool: p => { if (p) palWz = p; retur
   riconosci(cb){ ed = {picking: true, wz: cb, e: {}}; pk.step = 'r'; pk.q = ''; drawPick(); if (!$('dlg').open) $('dlg').showModal(); },
   annulla(){ if (get(cur)) { view = 'edit'; render(); scrollTo(0, 0); } },
   GRUPPI,
-  creaDaTesto(profilo, out){
+  creaDaTesto(profilo, out, testo){
     const old = db.clienti[0];
-    out.giorni.forEach(g => g.A.forEach(e => { if (e.m && !LIB.has(e.m) && !db.cat[e.m]) { const m = pool().find(x => x.id === e.m); if (m) { M[m.id] = m; db.cat[m.id] = m; } } }));
-    const c = {id: old ? old.id : uid(), cliente: profilo.nome || '', obiettivo: profilo.volte || out.giorni.length, varC: 'Corpo libero', giorni: out.giorni, note: [], profilo, data: iso(new Date()), nuova: true,
-      letta: {controlla: out.controlla}};
+    const c = {id: old ? old.id : uid(), cliente: profilo.nome || '', obiettivo: Math.min(6, Math.max(3, out.giorni.length)), varC: 'Corpo libero', giorni: out.giorni, note: old ? old.note || [] : [], profilo, data: iso(new Date()),
+      nuova: old ? !!old.nuova : true, testo, scelte: old && old.scelte || {}};
     db.clienti = [c]; save(); cur = c.id; view = 'edit'; tab = {}; render(); scrollTo(0, 0);
     try { localStorage.removeItem('solo-pt-bozza'); } catch (e) {}
   },
+  // la tua scheda (solo.js renderScheda / scegli)
+  foto: m => m.foto ? m.foto + (LIB.has(m.id) ? '' : '?c') : '',
+  tieni(m){ if (!m.lib && !LIB.has(m.id)) { const x = Object.assign({}, m); delete x.lib; M[m.id] = x; db.cat[m.id] = x; } },
+  salva(c){ touch(c); },
+  ridisegna(){ const y = window.scrollY; render(); window.scrollTo(0, y); },
+  scelte: () => (db.clienti[0] && db.clienti[0].scelte) || {},
+  riscrivi(){ const c = get(cur); if (!c || !SMOD) return; SMOD.avvia(c.profilo, 'testo', c.testo || ''); view = 'wiz'; render(); scrollTo(0, 0); },
   haMacchine: p => !!p && LIB.size > 0 && p.toLowerCase() === String(C.palestra || '').toLowerCase(),
   crea(profilo){
     const old = db.clienti[0], n = Math.max(1, Math.min(6, profilo.allenamenti || 3));
